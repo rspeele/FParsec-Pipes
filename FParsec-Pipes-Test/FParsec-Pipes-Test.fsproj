@@ -52,6 +52,9 @@
   <ItemGroup>
     <Compile Include="Tools.fs" />
     <Compile Include="TestIgnoredInputs.fs" />
+    <Compile Include="TestCapturedInputs.fs" />
+    <Compile Include="TestDefaultParsers.fs" />
+    <Compile Include="TestCustomDefaultParsers.fs" />
     <Content Include="packages.config" />
     <Content Include="app.config" />
   </ItemGroup>

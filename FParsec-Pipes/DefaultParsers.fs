@@ -19,11 +19,7 @@ and DefaultParser =
     static member inline (%%%%) (DefaultParser, numLitOpts : NumberLiteralOptions) = numberLiteral numLitOpts
     static member inline (%%%%) (DefaultParser, predicate : char -> bool) = satisfy predicate
     static member inline (%%%%) (DefaultParser, anyOfThese : char list) = anyOf anyOfThese
-
-    static member inline (%%%%) (DefaultParser, (a, b)) = tuple2 a b
-    static member inline (%%%%) (DefaultParser, (a, b, c)) = tuple3 a b c
-    static member inline (%%%%) (DefaultParser, (a, b, c, d)) = tuple4 a b c d
-    static member inline (%%%%) (DefaultParser, (a, b, c, d, e)) = tuple5 a b c d e
+    static member inline (%%%%) (DefaultParser, anyOfThese : string list) = choice (List.map pstring anyOfThese)
 
     static member inline (%%%%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar
     static member inline (%%%%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat
@@ -39,7 +35,7 @@ and DefaultParser =
 
     static member inline (%%%%) (DefaultParser, _ : DefaultParserOf< ^a >) = DefaultParser %%%% (null : CustomDefaultParserOf< ^a >)
 
-let parse<'a> = DefaultParserOf<'a>.Instance
+let auto<'a> = DefaultParserOf<'a>.Instance
 
 type DefaultEnding =
     | DefaultEnding
@@ -58,4 +54,7 @@ let inline (-+) pipe x = pipe |-+ %x
 let inline (?-) pipe x = pipe |?- %x
 let inline (?+) pipe x = pipe |?+ %x
 
-let ending = DefaultEnding
+let inline (!-) x = pipe -- x
+let inline (!+) x = pipe -+ x
+
+let autofun = DefaultEnding

@@ -9,17 +9,14 @@ type TestIgnoredInputs() =
     [<TestMethod>]
     member __.TestReturn() =
         let parser =
-            pipe
-            -|> "ret"
+            pipe -|> "ret"
         good parser "" 0 "ret"
         good parser "test" 0 "ret"
 
     [<TestMethod>]
     member __.TestSingleIgnoredInput() =
         let parser =
-            pipe
-            -- "required"
-            -|> "tsii"
+            !- "required" -|> "tsii"
         bad parser "" 0
         bad parser "test" 0 
         good parser "required" "required".Length "tsii"
@@ -28,10 +25,7 @@ type TestIgnoredInputs() =
     [<TestMethod>]
     member __.TestTwoIgnoredInputs() =
         let parser =
-            pipe
-            -- "req"
-            -- "uired"
-            -|> "ttii"
+            !- "req" -- "uired" -|> "ttii"
         bad parser "" 0
         bad parser "re" 0
         bad parser "req" 3
@@ -42,11 +36,7 @@ type TestIgnoredInputs() =
     [<TestMethod>]
     member __.TestThreeIgnoredInputs() =
         let parser =
-            pipe
-            -- "ab"
-            -- "cd"
-            -- "ef"
-            -|> "3ii"
+            !- "ab" -- "cd" -- "ef" -|> "3ii"
         bad parser "" 0
         bad parser "ab" 2
         bad parser "abc" 2
@@ -58,11 +48,7 @@ type TestIgnoredInputs() =
     [<TestMethod>]
     member __.TestThreeIgnoredInputsWithAttempt() =
         let parser =
-            pipe
-            -- "ab"
-            -- "cd"
-            ?- "ef"
-            -|> "3iia"
+            !- "ab" -- "cd" ?- "ef" -|> "3iia"
         bad parser "" 0
         bad parser "ab" 0
         bad parser "abc" 0
@@ -74,12 +60,7 @@ type TestIgnoredInputs() =
     [<TestMethod>]
     member __.TestFourIgnoredInputsWithAttempt() =
         let parser =
-            pipe
-            -- "ab"
-            -- "cd"
-            ?- "ef"
-            -- "gh"
-            -|> "4iia"
+            !- "ab" -- "cd" ?- "ef" -- "gh" -|> "4iia"
         bad parser "" 0
         bad parser "ab" 0
         bad parser "abc" 0
@@ -88,5 +69,3 @@ type TestIgnoredInputs() =
         bad parser "abcdefg" 6
         good parser "abcdefgh" 8 "4iia"
         good parser "abcdefghmore" 8 "4iia"
-        
-
