@@ -44,6 +44,22 @@ type TestCapturedInputs() =
             !+ "one" -- "two" -+ "three" -- "four" -+ "five" -|> fun x y z -> (x, y, z)
         bad parser "" 0
         bad parser "onetw" 3
+        bad parser "onetwothre" 6
+        bad parser "onetwothree" "onetwothree".Length
+        bad parser "onetwothree4five" "onetwothree".Length
+        bad parser "onetwothreefourfi" "onetwothreefour".Length
+        bad parser " onetwothreefourfive" 0
+        good parser "onetwothreefourfive" "onetwothreefourfive".Length ("one", "three", "five")
+        good parser "onetwothreefourfivek" "onetwothreefourfive".Length ("one", "three", "five")
+
+    [<TestMethod>]
+    member __.TestThreeWithIgnoredAndAttempt() =
+        let parser =
+            !+ "one" -- "two" -+ "three" ?- "four" -+ "five" -|> fun x y z -> (x, y, z)
+        bad parser "" 0
+        bad parser "onetw" 0
+        bad parser "onetwothre" 0
+        bad parser "onetwothree" "onetwothree".Length
         bad parser "onetwothree4five" "onetwothree".Length
         bad parser "onetwothreefourfi" "onetwothreefour".Length
         bad parser " onetwothreefourfive" 0
