@@ -97,37 +97,37 @@ type Pipe<'inp, 'out, 'fn, 'r, 'u> =
 let pipe<'inp, 'out, 'u> : Pipe<'inp, 'out, 'inp, 'out, 'u> =
     Pipe <| supplyInput
 
-let (|--+) (Pipe parent) (parser : Parser<_, _>) =
+let (|-+) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         parent (linkUp parser link) fn
 
-let (|---) (Pipe parent) (parser : Parser<_, _>) =
+let (|--) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         parent (ignoreUp parser link) fn
 
-let (|-?+) (Pipe parent) (parser : Parser<_, _>) =
+let (|?+) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         let first = parent(link0()) fn
         let next = (linkUp parser link).ToFunctionParser
         pipe2 (attempt first) next (|>)
 
-let (|-?-) (Pipe parent) (parser : Parser<_, _>) =
+let (|?-) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         let first = parent(link0()) fn
         let next = (ignoreUp parser link).ToFunctionParser
         pipe2 (attempt first) next (|>)
 
-let (|=<<) (Pipe parent) fn =
+let (--<|) (Pipe parent) fn =
     Pipe <|
     fun link ->
         parent (collapse link fn)
 
-let (|=>) (Pipe parent) fn : Parser<_, _> =
+let (-|>) (Pipe parent) fn : Parser<_, _> =
     parent (link0()) fn
 
-let (|=>>) parent fn =
-    Pipe <| (linkUp (parent |=> fn) >> supplyInput)
+let (--|>) parent fn =
+    Pipe <| (linkUp (parent -|> fn) >> supplyInput)
