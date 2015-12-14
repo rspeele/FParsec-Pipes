@@ -18,8 +18,11 @@ and DefaultParser =
     static member inline (%%%%) (DefaultParser, literal : string) = pstring literal
     static member inline (%%%%) (DefaultParser, numLitOpts : NumberLiteralOptions) = numberLiteral numLitOpts
     static member inline (%%%%) (DefaultParser, predicate : char -> bool) = satisfy predicate
+
     static member inline (%%%%) (DefaultParser, anyOfThese : char list) = anyOf anyOfThese
     static member inline (%%%%) (DefaultParser, anyOfThese : string list) = choice (List.map pstring anyOfThese)
+
+    static member inline (%%%%) (DefaultParser, (count, parser)) = parray count parser
 
     static member inline (%%%%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar
     static member inline (%%%%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat

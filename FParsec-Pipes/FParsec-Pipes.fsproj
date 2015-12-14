@@ -8,7 +8,7 @@
     <ProjectGuid>43972044-e21c-4442-a97a-f3bef84afd2e</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>FParsec_Pipes</RootNamespace>
-    <AssemblyName>FParsec_Pipes</AssemblyName>
+    <AssemblyName>FParsec-Pipes</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
