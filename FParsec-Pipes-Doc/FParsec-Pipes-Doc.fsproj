@@ -56,7 +56,8 @@
     <Content Include="style.css" />
     <Content Include="tips.js" />
     <None Include="template.html" />
-    <None Include="Tutorial.fsx" />
+    <None Include="Intro.fsx" />
+    <None Include="JSON.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpFormat">

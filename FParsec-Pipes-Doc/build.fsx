@@ -5,5 +5,5 @@ open System.IO
 let source = __SOURCE_DIRECTORY__
 let template = Path.Combine(source, "template.html")
 
-let script = Path.Combine(source, "Tutorial.fsx")
-Literate.ProcessScriptFile(script, template)
+for file in ["Intro.fsx"; "JSON.fsx"] do
+    Literate.ProcessScriptFile(Path.Combine(source, file), template)

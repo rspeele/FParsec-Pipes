@@ -61,3 +61,8 @@ let inline (!-) x = pipe -- x
 let inline (!+) x = pipe -+ x
 
 let autofun = DefaultEnding
+
+let precursive defineParser =
+    let p, pref = createParserForwardedToRef()
+    pref := defineParser p
+    p

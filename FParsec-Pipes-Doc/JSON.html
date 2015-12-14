@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <!-- 
-      The Tutorial parameters will be replaced with the 
+      The JSON parameters will be replaced with the 
       document title extracted from the <h1> element or
       file name, if there is no <h1> heading
     -->
-    <title>Tutorial</title>
+    <title>JSON</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="{page-description}">
     <meta name="author" content="{page-author}">
@@ -39,30 +39,26 @@
           <div class="tip" id="fs1">namespace System</div>
 <div class="tip" id="fs2">namespace FParsec</div>
 <div class="tip" id="fs3">namespace FParsec.Pipes</div>
-<div class="tip" id="fs4">val digits : n:int -&gt; Parser&lt;int,&#39;a&gt;<br /><br />Full name: Tutorial.digits</div>
+<div class="tip" id="fs4">val digits : n:int -&gt; Parser&lt;int,&#39;a&gt;<br /><br />Full name: JSON.digits</div>
 <div class="tip" id="fs5">val n : int</div>
 <div class="tip" id="fs6">Multiple items<br />val int : value:&#39;T -&gt; int (requires member op_Explicit)<br /><br />Full name: Microsoft.FSharp.Core.Operators.int<br /><br />--------------------<br />type int = int32<br /><br />Full name: Microsoft.FSharp.Core.int<br /><br />--------------------<br />type int&lt;&#39;Measure&gt; = int<br /><br />Full name: Microsoft.FSharp.Core.int&lt;_&gt;</div>
 <div class="tip" id="fs7">val digit : Parser&lt;char,&#39;u&gt;<br /><br />Full name: FParsec.CharParsers.digit</div>
 <div class="tip" id="fs8">Multiple items<br />type String =<br />&#160;&#160;new : value:char -&gt; string + 7 overloads<br />&#160;&#160;member Chars : int -&gt; char<br />&#160;&#160;member Clone : unit -&gt; obj<br />&#160;&#160;member CompareTo : value:obj -&gt; int + 1 overload<br />&#160;&#160;member Contains : value:string -&gt; bool<br />&#160;&#160;member CopyTo : sourceIndex:int * destination:char[] * destinationIndex:int * count:int -&gt; unit<br />&#160;&#160;member EndsWith : value:string -&gt; bool + 2 overloads<br />&#160;&#160;member Equals : obj:obj -&gt; bool + 2 overloads<br />&#160;&#160;member GetEnumerator : unit -&gt; CharEnumerator<br />&#160;&#160;member GetHashCode : unit -&gt; int<br />&#160;&#160;...<br /><br />Full name: System.String<br /><br />--------------------<br />String(value: nativeptr&lt;char&gt;) : unit<br />String(value: nativeptr&lt;sbyte&gt;) : unit<br />String(value: char []) : unit<br />String(c: char, count: int) : unit<br />String(value: nativeptr&lt;char&gt;, startIndex: int, length: int) : unit<br />String(value: nativeptr&lt;sbyte&gt;, startIndex: int, length: int) : unit<br />String(value: char [], startIndex: int, length: int) : unit<br />String(value: nativeptr&lt;sbyte&gt;, startIndex: int, length: int, enc: Text.Encoding) : unit</div>
 <div class="tip" id="fs9">type Int32 =<br />&#160;&#160;struct<br />&#160;&#160;&#160;&#160;member CompareTo : value:obj -&gt; int + 1 overload<br />&#160;&#160;&#160;&#160;member Equals : obj:obj -&gt; bool + 1 overload<br />&#160;&#160;&#160;&#160;member GetHashCode : unit -&gt; int<br />&#160;&#160;&#160;&#160;member GetTypeCode : unit -&gt; TypeCode<br />&#160;&#160;&#160;&#160;member ToString : unit -&gt; string + 3 overloads<br />&#160;&#160;&#160;&#160;static val MaxValue : int<br />&#160;&#160;&#160;&#160;static val MinValue : int<br />&#160;&#160;&#160;&#160;static member Parse : s:string -&gt; int + 3 overloads<br />&#160;&#160;&#160;&#160;static member TryParse : s:string * result:int -&gt; bool + 1 overload<br />&#160;&#160;end<br /><br />Full name: System.Int32</div>
 <div class="tip" id="fs10">Int32.Parse(s: string) : int<br />Int32.Parse(s: string, provider: IFormatProvider) : int<br />Int32.Parse(s: string, style: Globalization.NumberStyles) : int<br />Int32.Parse(s: string, style: Globalization.NumberStyles, provider: IFormatProvider) : int</div>
-<div class="tip" id="fs11">type Date =<br />&#160;&#160;{Year: int;<br />&#160;&#160;&#160;Month: int;<br />&#160;&#160;&#160;Day: int;}<br /><br />Full name: Tutorial.Date</div>
-<div class="tip" id="fs12">Date.Year: int</div>
-<div class="tip" id="fs13">Date.Month: int</div>
-<div class="tip" id="fs14">Date.Day: int</div>
-<div class="tip" id="fs15">val date : Parser&lt;Date,unit&gt;<br /><br />Full name: Tutorial.date</div>
-<div class="tip" id="fs16">type Parser&lt;&#39;Result,&#39;UserState&gt; = CharStream&lt;&#39;UserState&gt; -&gt; Reply&lt;&#39;Result&gt;<br /><br />Full name: FParsec.Primitives.Parser&lt;_,_&gt;</div>
-<div class="tip" id="fs17">type unit = Unit<br /><br />Full name: Microsoft.FSharp.Core.unit</div>
-<div class="tip" id="fs18">val yyyy : int</div>
-<div class="tip" id="fs19">val mm : int</div>
-<div class="tip" id="fs20">val dd : int</div>
-<div class="tip" id="fs21">type Time =<br />&#160;&#160;{Hour: int;<br />&#160;&#160;&#160;Minute: int;<br />&#160;&#160;&#160;Second: int;}<br /><br />Full name: Tutorial.Time</div>
-<div class="tip" id="fs22">Time.Hour: int</div>
-<div class="tip" id="fs23">Time.Minute: int</div>
-<div class="tip" id="fs24">Time.Second: int</div>
-<div class="tip" id="fs25">val time : Parser&lt;Time,unit&gt;<br /><br />Full name: Tutorial.time</div>
-<div class="tip" id="fs26">val hh : int</div>
-<div class="tip" id="fs27">val ss : int</div>
+<div class="tip" id="fs11">val date : Parser&lt;(int * int * int),unit&gt;<br /><br />Full name: JSON.date</div>
+<div class="tip" id="fs12">val autofun : DefaultEnding<br /><br />Full name: FParsec.Pipes.DefaultParsers.autofun</div>
+<div class="tip" id="fs13">val time : Parser&lt;(int * int * int),unit&gt;<br /><br />Full name: JSON.time</div>
+<div class="tip" id="fs14">val iso8601 : Parser&lt;DateTime,unit&gt;<br /><br />Full name: JSON.iso8601</div>
+<div class="tip" id="fs15">type Parser&lt;&#39;Result,&#39;UserState&gt; = CharStream&lt;&#39;UserState&gt; -&gt; Reply&lt;&#39;Result&gt;<br /><br />Full name: FParsec.Primitives.Parser&lt;_,_&gt;</div>
+<div class="tip" id="fs16">type unit = Unit<br /><br />Full name: Microsoft.FSharp.Core.unit</div>
+<div class="tip" id="fs17">val yyyy : int</div>
+<div class="tip" id="fs18">val mm : int</div>
+<div class="tip" id="fs19">val dd : int</div>
+<div class="tip" id="fs20">val hh : int</div>
+<div class="tip" id="fs21">val mi : int</div>
+<div class="tip" id="fs22">val ss : int</div>
+<div class="tip" id="fs23">Multiple items<br />type DateTime =<br />&#160;&#160;struct<br />&#160;&#160;&#160;&#160;new : ticks:int64 -&gt; DateTime + 10 overloads<br />&#160;&#160;&#160;&#160;member Add : value:TimeSpan -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddDays : value:float -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddHours : value:float -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddMilliseconds : value:float -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddMinutes : value:float -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddMonths : months:int -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddSeconds : value:float -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddTicks : value:int64 -&gt; DateTime<br />&#160;&#160;&#160;&#160;member AddYears : value:int -&gt; DateTime<br />&#160;&#160;&#160;&#160;...<br />&#160;&#160;end<br /><br />Full name: System.DateTime<br /><br />--------------------<br />DateTime()<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(ticks: int64) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(ticks: int64, kind: DateTimeKind) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int, calendar: Globalization.Calendar) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int, hour: int, minute: int, second: int) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int, hour: int, minute: int, second: int, kind: DateTimeKind) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int, hour: int, minute: int, second: int, calendar: Globalization.Calendar) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int, hour: int, minute: int, second: int, millisecond: int) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em><br />DateTime(year: int, month: int, day: int, hour: int, minute: int, second: int, millisecond: int, kind: DateTimeKind) : unit<br />&#160;&#160;&#160;<em>(+0 other overloads)</em></div>
           
         </div>
         <div class="span3">
