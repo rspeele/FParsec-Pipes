@@ -47,7 +47,10 @@ let datetime : Parser<_, unit> =
 
 ## How do I use it?
 
-There are two main things to learn.
+If you don't already know FParsec or another parser combinator library, learn that first
+from its excellent [tutorial](http://www.quanttec.com/fparsec/tutorial.html).
+
+For this library, there are two main things to learn, plus a third bonus thing you can usually ignore.
 
 ### Default parsers for values
 
@@ -172,6 +175,8 @@ let vector3shorter : Parser<_, unit> =
 
 (**
 
+### Backtracking
+
 At this point you can glue together most parsers just using these operators. There are a few nice things about this:
 
 * To see what tokens get parsed, you always just read left-to-right and top-to-bottom.
@@ -254,6 +259,10 @@ Here's what that means: whenever you have `?-` or `?+` instead of `--` or `-+`,
 _the entire chunk of the pipeline prior to that operator_ will be wrapped in `attempt` ,
 meaning that if any of its constituent parsers fail, the input stream will backtrack to the start
 of the pipeline.
+
+Of course, if you need to, you could always just break your pipeline into pieces and apply `attempt` or
+the FParsec operators `>>?`, `.>>?`, or `.>>.?` to handle your backtracking. However, I believe `?-` and
+`?+` in pipelines should cover most if not all backtracking needs.
 
 *)
 

@@ -94,7 +94,10 @@ and easier to think through.</p>
 
 <h2>How do I use it?</h2>
 
-<p>There are two main things to learn.</p>
+<p>If you don't already know FParsec or another parser combinator library, learn that first
+from its excellent <a href="http://www.quanttec.com/fparsec/tutorial.html">tutorial</a>.</p>
+
+<p>For this library, there are two main things to learn, plus a third bonus thing you can usually ignore.</p>
 
 <h3>Default parsers for values</h3>
 
@@ -288,6 +291,8 @@ too bad to just drop <code>spaces -- ',' -- spaces</code> in directly instead of
 </tr>
 </table>
 
+<h3>Backtracking</h3>
+
 <p>At this point you can glue together most parsers just using these operators. There are a few nice things about this:</p>
 
 <ul>
@@ -392,6 +397,10 @@ But once you've read another variable name, you can be confident that this is ei
 <em>the entire chunk of the pipeline prior to that operator</em> will be wrapped in <code>attempt</code> ,
 meaning that if any of its constituent parsers fail, the input stream will backtrack to the start
 of the pipeline.</p>
+
+<p>Of course, if you need to, you could always just break your pipeline into pieces and apply <code>attempt</code> or
+the FParsec operators <code>&gt;&gt;?</code>, <code>.&gt;&gt;?</code>, or <code>.&gt;&gt;.?</code> to handle your backtracking. However, I believe <code>?-</code> and
+<code>?+</code> in pipelines should cover most if not all backtracking needs.</p>
 
           <div class="tip" id="fs1">namespace System</div>
 <div class="tip" id="fs2">namespace FParsec</div>
