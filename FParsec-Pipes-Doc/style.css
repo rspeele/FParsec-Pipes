@@ -25,7 +25,7 @@ span.k { color: #569CD6; }
 /* comment */
 span.c { color: #57A64A; }
 /* operators */
-span.o { color: #ffc859;font-weight: bold; }
+span.o { color: #569CD6;font-weight: bold; }
 /* numbers */
 span.n { color: #B5CEA8; }
 /* line number */
