@@ -49,27 +49,7 @@ and easier to think through.</p>
 
 <h2>What does a parser look like written with these operators?</h2>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
-<span class="l"> 2: </span>
-<span class="l"> 3: </span>
-<span class="l"> 4: </span>
-<span class="l"> 5: </span>
-<span class="l"> 6: </span>
-<span class="l"> 7: </span>
-<span class="l"> 8: </span>
-<span class="l"> 9: </span>
-<span class="l">10: </span>
-<span class="l">11: </span>
-<span class="l">12: </span>
-<span class="l">13: </span>
-<span class="l">14: </span>
-<span class="l">15: </span>
-<span class="l">16: </span>
-<span class="l">17: </span>
-<span class="l">18: </span>
-<span class="l">19: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// Parses `count` digits and returns the result as an integer.</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// Parses `count` digits and returns the result as an integer.</span>
 <span class="k">let</span> <span onmouseout="hideTip(event, 'fs4', 5)" onmouseover="showTip(event, 'fs4', 5)" class="f">digits</span> (<span onmouseout="hideTip(event, 'fs5', 6)" onmouseover="showTip(event, 'fs5', 6)" class="i">count</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="t">int</span>) <span class="o">=</span>
     <span class="o">!+</span> (<span onmouseout="hideTip(event, 'fs5', 8)" onmouseover="showTip(event, 'fs5', 8)" class="i">count</span>, <span onmouseout="hideTip(event, 'fs7', 9)" onmouseover="showTip(event, 'fs7', 9)" class="f">digit</span>) <span class="o">-|&gt;</span> (<span onmouseout="hideTip(event, 'fs8', 10)" onmouseover="showTip(event, 'fs8', 10)" class="t">String</span> <span class="o">&gt;</span><span class="o">&gt;</span> <span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="t">Int32</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs10', 12)" onmouseover="showTip(event, 'fs10', 12)" class="f">Parse</span>)
 
@@ -88,9 +68,7 @@ and easier to think through.</p>
     <span class="o">!+</span> <span onmouseout="hideTip(event, 'fs11', 36)" onmouseover="showTip(event, 'fs11', 36)" class="f">date</span> <span class="o">--</span> <span class="s">&#39;T&#39;</span> <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs15', 37)" onmouseover="showTip(event, 'fs15', 37)" class="f">time</span>
     <span class="o">-|&gt;</span> <span class="k">fun</span> (<span onmouseout="hideTip(event, 'fs12', 38)" onmouseover="showTip(event, 'fs12', 38)" class="i">yyyy</span>, <span onmouseout="hideTip(event, 'fs13', 39)" onmouseover="showTip(event, 'fs13', 39)" class="i">mm</span>, <span onmouseout="hideTip(event, 'fs14', 40)" onmouseover="showTip(event, 'fs14', 40)" class="i">dd</span>) (<span onmouseout="hideTip(event, 'fs16', 41)" onmouseover="showTip(event, 'fs16', 41)" class="i">hh</span>, <span onmouseout="hideTip(event, 'fs21', 42)" onmouseover="showTip(event, 'fs21', 42)" class="i">mi</span>, <span onmouseout="hideTip(event, 'fs17', 43)" onmouseover="showTip(event, 'fs17', 43)" class="i">ss</span>) <span class="k">-&gt;</span>
         <span class="k">new</span> <span onmouseout="hideTip(event, 'fs22', 44)" onmouseover="showTip(event, 'fs22', 44)" class="t">DateTime</span>(<span onmouseout="hideTip(event, 'fs12', 45)" onmouseover="showTip(event, 'fs12', 45)" class="i">yyyy</span>, <span onmouseout="hideTip(event, 'fs13', 46)" onmouseover="showTip(event, 'fs13', 46)" class="i">mm</span>, <span onmouseout="hideTip(event, 'fs14', 47)" onmouseover="showTip(event, 'fs14', 47)" class="i">dd</span>, <span onmouseout="hideTip(event, 'fs16', 48)" onmouseover="showTip(event, 'fs16', 48)" class="i">hh</span>, <span onmouseout="hideTip(event, 'fs21', 49)" onmouseover="showTip(event, 'fs21', 49)" class="i">mi</span>, <span onmouseout="hideTip(event, 'fs17', 50)" onmouseover="showTip(event, 'fs17', 50)" class="i">ss</span>)
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <h2>How do I use it?</h2>
 
@@ -104,24 +82,14 @@ from its excellent <a href="http://www.quanttec.com/fparsec/tutorial.html">tutor
 <p>First, you can use the prefix operator <code>%</code> on many types of values to
 create the parser that sensibly corresponds to that value. For example:</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-<span class="l">6: </span>
-<span class="l">7: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// Expression:              // Equivalent to:</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// Expression:              // Equivalent to:</span>
 <span class="o">%</span><span class="s">&quot;bob&quot;</span>                      <span class="c">// pstring &quot;bob&quot;</span>
 <span class="o">%</span><span class="s">&#39;b&#39;</span>                        <span class="c">// pchar &#39;b&#39;</span>
 <span class="o">%</span>[<span class="s">&#39;a&#39;</span>; <span class="s">&#39;b&#39;</span>]                 <span class="c">// anyOf &quot;ab&quot;</span>
 <span class="o">%</span>[<span class="s">&quot;alice&quot;</span>; <span class="s">&quot;bob&quot;</span>]           <span class="c">// choice [pstring &quot;alice&quot;; pstring &quot;bob&quot;]</span>
 <span class="o">%</span>[<span onmouseout="hideTip(event, 'fs23', 51)" onmouseover="showTip(event, 'fs23', 51)" class="f">pint32</span>; <span onmouseout="hideTip(event, 'fs24', 52)" onmouseover="showTip(event, 'fs24', 52)" class="f">preturn</span> (<span class="o">-</span><span class="n">1</span>)]     <span class="c">// choice [pint32; preturn (-1)]</span>
 <span class="o">%</span>(<span class="n">3</span>, <span onmouseout="hideTip(event, 'fs7', 53)" onmouseover="showTip(event, 'fs7', 53)" class="f">digit</span>)                 <span class="c">// parray 3 digit</span>
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <p>The value you pass to <code>%</code> can also be of type <code>DefaultParserOf&lt;'a&gt;</code>, which you
 can obtain by using <code>auto&lt;'a&gt;</code>. If <code>'a</code> is a supported type, the resulting
@@ -129,42 +97,18 @@ parser will be one to parse any <code>'a</code>.</p>
 
 <p>This works for several primitive types, including all integer types.</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// Expression:    // Equivalent to:</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="c">// Expression:    // Equivalent to:</span>
 <span class="o">%</span><span onmouseout="hideTip(event, 'fs25', 54)" onmouseover="showTip(event, 'fs25', 54)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs6', 55)" onmouseover="showTip(event, 'fs6', 55)" class="t">int</span><span class="o">&gt;</span>        <span class="c">// pint32</span>
 <span class="o">%</span><span onmouseout="hideTip(event, 'fs25', 56)" onmouseover="showTip(event, 'fs25', 56)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs26', 57)" onmouseover="showTip(event, 'fs26', 57)" class="t">uint16</span><span class="o">&gt;</span>     <span class="c">// puint16</span>
 <span class="o">%</span><span onmouseout="hideTip(event, 'fs25', 58)" onmouseover="showTip(event, 'fs25', 58)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 59)" onmouseover="showTip(event, 'fs27', 59)" class="t">float</span><span class="o">&gt;</span>      <span class="c">// pfloat</span>
 <span class="o">%</span><span onmouseout="hideTip(event, 'fs25', 60)" onmouseover="showTip(event, 'fs25', 60)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs28', 61)" onmouseover="showTip(event, 'fs28', 61)" class="t">Position</span><span class="o">&gt;</span>   <span class="c">// getPosition</span>
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <p>You can make <code>auto</code> work for your own types, too. Simply define:</p>
 
 <p><code>static member DefaultParser : Parser&lt;'a, 'u&gt;</code></p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
-<span class="l"> 2: </span>
-<span class="l"> 3: </span>
-<span class="l"> 4: </span>
-<span class="l"> 5: </span>
-<span class="l"> 6: </span>
-<span class="l"> 7: </span>
-<span class="l"> 8: </span>
-<span class="l"> 9: </span>
-<span class="l">10: </span>
-<span class="l">11: </span>
-<span class="l">12: </span>
-<span class="l">13: </span>
-<span class="l">14: </span>
-<span class="l">15: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs29', 62)" onmouseover="showTip(event, 'fs29', 62)" class="t">Vector3D</span> <span class="o">=</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs29', 62)" onmouseover="showTip(event, 'fs29', 62)" class="t">Vector3D</span> <span class="o">=</span>
     {
         <span onmouseout="hideTip(event, 'fs30', 63)" onmouseover="showTip(event, 'fs30', 63)" class="i">X</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs27', 64)" onmouseover="showTip(event, 'fs27', 64)" class="t">float</span>
         <span onmouseout="hideTip(event, 'fs31', 65)" onmouseover="showTip(event, 'fs31', 65)" class="i">Y</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs27', 66)" onmouseover="showTip(event, 'fs27', 66)" class="t">float</span>
@@ -179,9 +123,7 @@ parser will be one to parse any <code>'a</code>.</p>
             (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs37', 84)" onmouseover="showTip(event, 'fs37', 84)" class="i">x</span> <span onmouseout="hideTip(event, 'fs38', 85)" onmouseover="showTip(event, 'fs38', 85)" class="i">y</span> <span onmouseout="hideTip(event, 'fs39', 86)" onmouseover="showTip(event, 'fs39', 86)" class="i">z</span> <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs30', 87)" onmouseover="showTip(event, 'fs30', 87)" class="i">X</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 88)" onmouseover="showTip(event, 'fs37', 88)" class="i">x</span>; <span onmouseout="hideTip(event, 'fs31', 89)" onmouseover="showTip(event, 'fs31', 89)" class="i">Y</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 90)" onmouseover="showTip(event, 'fs38', 90)" class="i">y</span>; <span onmouseout="hideTip(event, 'fs32', 91)" onmouseover="showTip(event, 'fs32', 91)" class="i">Z</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 92)" onmouseover="showTip(event, 'fs39', 92)" class="i">z</span> })
 
 <span class="o">%</span><span onmouseout="hideTip(event, 'fs25', 93)" onmouseover="showTip(event, 'fs25', 93)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs29', 94)" onmouseover="showTip(event, 'fs29', 94)" class="t">Vector3D</span><span class="o">&gt;</span> <span class="c">// equivalent to Vector3D.DefaultParser</span>
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <h3>Pipes</h3>
 
@@ -191,33 +133,7 @@ parser will be one to parse any <code>'a</code>.</p>
 
 <p>Let's see how the same parser would be written with those operators - first, with verbose comments.</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
-<span class="l"> 2: </span>
-<span class="l"> 3: </span>
-<span class="l"> 4: </span>
-<span class="l"> 5: </span>
-<span class="l"> 6: </span>
-<span class="l"> 7: </span>
-<span class="l"> 8: </span>
-<span class="l"> 9: </span>
-<span class="l">10: </span>
-<span class="l">11: </span>
-<span class="l">12: </span>
-<span class="l">13: </span>
-<span class="l">14: </span>
-<span class="l">15: </span>
-<span class="l">16: </span>
-<span class="l">17: </span>
-<span class="l">18: </span>
-<span class="l">19: </span>
-<span class="l">20: </span>
-<span class="l">21: </span>
-<span class="l">22: </span>
-<span class="l">23: </span>
-<span class="l">24: </span>
-<span class="l">25: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs40', 95)" onmouseover="showTip(event, 'fs40', 95)" class="f">vector3</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs19', 96)" onmouseover="showTip(event, 'fs19', 96)" class="t">Parser</span><span class="o">&lt;</span>_, <span onmouseout="hideTip(event, 'fs20', 97)" onmouseover="showTip(event, 'fs20', 97)" class="t">unit</span><span class="o">&gt;</span> <span class="o">=</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs40', 95)" onmouseover="showTip(event, 'fs40', 95)" class="f">vector3</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs19', 96)" onmouseover="showTip(event, 'fs19', 96)" class="t">Parser</span><span class="o">&lt;</span>_, <span onmouseout="hideTip(event, 'fs20', 97)" onmouseover="showTip(event, 'fs20', 97)" class="t">unit</span><span class="o">&gt;</span> <span class="o">=</span>
     <span class="k">let</span> <span onmouseout="hideTip(event, 'fs34', 98)" onmouseover="showTip(event, 'fs34', 98)" class="f">comma</span> <span class="o">=</span>
         <span onmouseout="hideTip(event, 'fs41', 99)" onmouseover="showTip(event, 'fs41', 99)" class="i">pipe</span>      <span class="c">// `pipe` starts a pipeline of parsers.</span>
         <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 100)" onmouseover="showTip(event, 'fs35', 100)" class="f">spaces</span> <span class="c">// The `--` operator adds a parser to the pipeline, ignoring its output.</span>
@@ -242,30 +158,18 @@ parser will be one to parse any <code>'a</code>.</p>
     <span class="c">// and returns the output type of our parser. This is the same function</span>
     <span class="c">// that we gave to `pipe3` in the earlier example.</span>
     <span class="o">-|&gt;</span> <span class="k">fun</span> <span onmouseout="hideTip(event, 'fs37', 113)" onmouseover="showTip(event, 'fs37', 113)" class="i">x</span> <span onmouseout="hideTip(event, 'fs38', 114)" onmouseover="showTip(event, 'fs38', 114)" class="i">y</span> <span onmouseout="hideTip(event, 'fs39', 115)" onmouseover="showTip(event, 'fs39', 115)" class="i">z</span> <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs30', 116)" onmouseover="showTip(event, 'fs30', 116)" class="i">X</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 117)" onmouseover="showTip(event, 'fs37', 117)" class="i">x</span>; <span onmouseout="hideTip(event, 'fs31', 118)" onmouseover="showTip(event, 'fs31', 118)" class="i">Y</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 119)" onmouseover="showTip(event, 'fs38', 119)" class="i">y</span>; <span onmouseout="hideTip(event, 'fs32', 120)" onmouseover="showTip(event, 'fs32', 120)" class="i">Z</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 121)" onmouseover="showTip(event, 'fs39', 121)" class="i">z</span> }
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <p>Now to write it more concisely. Putting more than one parser per line makes it fairly compact.</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-<span class="l">6: </span>
-<span class="l">7: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs42', 122)" onmouseover="showTip(event, 'fs42', 122)" class="f">vector3short</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs19', 123)" onmouseover="showTip(event, 'fs19', 123)" class="t">Parser</span><span class="o">&lt;</span>_, <span onmouseout="hideTip(event, 'fs20', 124)" onmouseover="showTip(event, 'fs20', 124)" class="t">unit</span><span class="o">&gt;</span> <span class="o">=</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs42', 122)" onmouseover="showTip(event, 'fs42', 122)" class="f">vector3short</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs19', 123)" onmouseover="showTip(event, 'fs19', 123)" class="t">Parser</span><span class="o">&lt;</span>_, <span onmouseout="hideTip(event, 'fs20', 124)" onmouseover="showTip(event, 'fs20', 124)" class="t">unit</span><span class="o">&gt;</span> <span class="o">=</span>
     <span class="k">let</span> <span onmouseout="hideTip(event, 'fs34', 125)" onmouseover="showTip(event, 'fs34', 125)" class="f">comma</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs41', 126)" onmouseover="showTip(event, 'fs41', 126)" class="i">pipe</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 127)" onmouseover="showTip(event, 'fs35', 127)" class="f">spaces</span> <span class="o">--</span> <span class="s">&#39;,&#39;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 128)" onmouseover="showTip(event, 'fs35', 128)" class="f">spaces</span> <span class="o">-|&gt;</span> ()
     <span onmouseout="hideTip(event, 'fs41', 129)" onmouseover="showTip(event, 'fs41', 129)" class="i">pipe</span> <span class="o">--</span> <span class="s">&#39;(&#39;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 130)" onmouseover="showTip(event, 'fs35', 130)" class="f">spaces</span>
     <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs25', 131)" onmouseover="showTip(event, 'fs25', 131)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 132)" onmouseover="showTip(event, 'fs27', 132)" class="t">float</span><span class="o">&gt;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs34', 133)" onmouseover="showTip(event, 'fs34', 133)" class="f">comma</span>
     <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs25', 134)" onmouseover="showTip(event, 'fs25', 134)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 135)" onmouseover="showTip(event, 'fs27', 135)" class="t">float</span><span class="o">&gt;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs34', 136)" onmouseover="showTip(event, 'fs34', 136)" class="f">comma</span>
     <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs25', 137)" onmouseover="showTip(event, 'fs25', 137)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 138)" onmouseover="showTip(event, 'fs27', 138)" class="t">float</span><span class="o">&gt;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 139)" onmouseover="showTip(event, 'fs35', 139)" class="f">spaces</span> <span class="o">--</span> <span class="s">&#39;)&#39;</span>
     <span class="o">-|&gt;</span> <span class="k">fun</span> <span onmouseout="hideTip(event, 'fs37', 140)" onmouseover="showTip(event, 'fs37', 140)" class="i">x</span> <span onmouseout="hideTip(event, 'fs38', 141)" onmouseover="showTip(event, 'fs38', 141)" class="i">y</span> <span onmouseout="hideTip(event, 'fs39', 142)" onmouseover="showTip(event, 'fs39', 142)" class="i">z</span> <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs30', 143)" onmouseover="showTip(event, 'fs30', 143)" class="i">X</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 144)" onmouseover="showTip(event, 'fs37', 144)" class="i">x</span>; <span onmouseout="hideTip(event, 'fs31', 145)" onmouseover="showTip(event, 'fs31', 145)" class="i">Y</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 146)" onmouseover="showTip(event, 'fs38', 146)" class="i">y</span>; <span onmouseout="hideTip(event, 'fs32', 147)" onmouseover="showTip(event, 'fs32', 147)" class="i">Z</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 148)" onmouseover="showTip(event, 'fs39', 148)" class="i">z</span> }
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <p>Every pipeline starts with <code>pipe -- x</code> or, if the first parser needs to be captured, <code>pipe -+ x</code>.
 These can be replaced with the prefix operators <code>!-</code> and <code>!+</code> respectively.
@@ -274,22 +178,13 @@ These can be replaced with the prefix operators <code>!-</code> and <code>!+</co
 <p>Also, at this point the amount of clutter in the parser is low enough that it doesn't look
 too bad to just drop <code>spaces -- ',' -- spaces</code> in directly instead of binding a separate <code>comma</code> parser.</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-<span class="l">3: </span>
-<span class="l">4: </span>
-<span class="l">5: </span>
-<span class="l">6: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs43', 149)" onmouseover="showTip(event, 'fs43', 149)" class="f">vector3shorter</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs19', 150)" onmouseover="showTip(event, 'fs19', 150)" class="t">Parser</span><span class="o">&lt;</span>_, <span onmouseout="hideTip(event, 'fs20', 151)" onmouseover="showTip(event, 'fs20', 151)" class="t">unit</span><span class="o">&gt;</span> <span class="o">=</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs43', 149)" onmouseover="showTip(event, 'fs43', 149)" class="f">vector3shorter</span> <span class="o">:</span> <span onmouseout="hideTip(event, 'fs19', 150)" onmouseover="showTip(event, 'fs19', 150)" class="t">Parser</span><span class="o">&lt;</span>_, <span onmouseout="hideTip(event, 'fs20', 151)" onmouseover="showTip(event, 'fs20', 151)" class="t">unit</span><span class="o">&gt;</span> <span class="o">=</span>
     <span class="o">!-</span> <span class="s">&#39;(&#39;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 152)" onmouseover="showTip(event, 'fs35', 152)" class="f">spaces</span>
     <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs25', 153)" onmouseover="showTip(event, 'fs25', 153)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 154)" onmouseover="showTip(event, 'fs27', 154)" class="t">float</span><span class="o">&gt;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 155)" onmouseover="showTip(event, 'fs35', 155)" class="f">spaces</span> <span class="o">--</span> <span class="s">&#39;,&#39;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 156)" onmouseover="showTip(event, 'fs35', 156)" class="f">spaces</span>
     <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs25', 157)" onmouseover="showTip(event, 'fs25', 157)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 158)" onmouseover="showTip(event, 'fs27', 158)" class="t">float</span><span class="o">&gt;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 159)" onmouseover="showTip(event, 'fs35', 159)" class="f">spaces</span> <span class="o">--</span> <span class="s">&#39;,&#39;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 160)" onmouseover="showTip(event, 'fs35', 160)" class="f">spaces</span>
     <span class="o">-+</span> <span onmouseout="hideTip(event, 'fs25', 161)" onmouseover="showTip(event, 'fs25', 161)" class="i">auto</span><span class="o">&lt;</span><span onmouseout="hideTip(event, 'fs27', 162)" onmouseover="showTip(event, 'fs27', 162)" class="t">float</span><span class="o">&gt;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs35', 163)" onmouseover="showTip(event, 'fs35', 163)" class="f">spaces</span> <span class="o">--</span> <span class="s">&#39;)&#39;</span>
     <span class="o">-|&gt;</span> <span class="k">fun</span> <span onmouseout="hideTip(event, 'fs37', 164)" onmouseover="showTip(event, 'fs37', 164)" class="i">x</span> <span onmouseout="hideTip(event, 'fs38', 165)" onmouseover="showTip(event, 'fs38', 165)" class="i">y</span> <span onmouseout="hideTip(event, 'fs39', 166)" onmouseover="showTip(event, 'fs39', 166)" class="i">z</span> <span class="k">-&gt;</span> { <span onmouseout="hideTip(event, 'fs30', 167)" onmouseover="showTip(event, 'fs30', 167)" class="i">X</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs37', 168)" onmouseover="showTip(event, 'fs37', 168)" class="i">x</span>; <span onmouseout="hideTip(event, 'fs31', 169)" onmouseover="showTip(event, 'fs31', 169)" class="i">Y</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs38', 170)" onmouseover="showTip(event, 'fs38', 170)" class="i">y</span>; <span onmouseout="hideTip(event, 'fs32', 171)" onmouseover="showTip(event, 'fs32', 171)" class="i">Z</span> <span class="o">=</span> <span onmouseout="hideTip(event, 'fs39', 172)" onmouseover="showTip(event, 'fs39', 172)" class="i">z</span> }
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <h3>Backtracking</h3>
 
@@ -325,26 +220,7 @@ parse these expressions without backtracking -- but it's the clearest way to cod
 use the real rules for identifiers, and so on, but the point here is just to demonstrate backtracking, so let's
 pretend all we care about is distinguishing variable names from LINQ queries.</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l"> 1: </span>
-<span class="l"> 2: </span>
-<span class="l"> 3: </span>
-<span class="l"> 4: </span>
-<span class="l"> 5: </span>
-<span class="l"> 6: </span>
-<span class="l"> 7: </span>
-<span class="l"> 8: </span>
-<span class="l"> 9: </span>
-<span class="l">10: </span>
-<span class="l">11: </span>
-<span class="l">12: </span>
-<span class="l">13: </span>
-<span class="l">14: </span>
-<span class="l">15: </span>
-<span class="l">16: </span>
-<span class="l">17: </span>
-<span class="l">18: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs44', 173)" onmouseover="showTip(event, 'fs44', 173)" class="t">WhichExpressionIsIt</span> <span class="o">=</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">type</span> <span onmouseout="hideTip(event, 'fs44', 173)" onmouseover="showTip(event, 'fs44', 173)" class="t">WhichExpressionIsIt</span> <span class="o">=</span>
     | <span onmouseout="hideTip(event, 'fs45', 174)" onmouseover="showTip(event, 'fs45', 174)" class="p">VariableName</span>
     | <span onmouseout="hideTip(event, 'fs46', 175)" onmouseover="showTip(event, 'fs46', 175)" class="p">LinqQuery</span>
 
@@ -362,9 +238,7 @@ pretend all we care about is distinguishing variable names from LINQ queries.</p
         <span class="c">// or a...</span>
         <span onmouseout="hideTip(event, 'fs47', 194)" onmouseover="showTip(event, 'fs47', 194)" class="f">variableName</span>
     ]
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <p>This won't work. Given the input text <code>"from . ToString()"</code>,
 the first choice will <em>start to succeed</em> by parsing the string <code>"from"</code> and some spaces.</p>
@@ -382,14 +256,9 @@ But once you've read another variable name, you can be confident that this is ei
 
 <p>The modification to make the parser is very simple:</p>
 
-<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
-<span class="l">2: </span>
-</pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs55', 195)" onmouseover="showTip(event, 'fs55', 195)" class="f">linqQueryBacktracking</span> <span class="o">=</span>
+<pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs55', 195)" onmouseover="showTip(event, 'fs55', 195)" class="f">linqQueryBacktracking</span> <span class="o">=</span>
     <span class="o">!-</span> <span class="s">&quot;from&quot;</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs53', 196)" onmouseover="showTip(event, 'fs53', 196)" class="f">spaces1</span> <span class="o">--</span> <span onmouseout="hideTip(event, 'fs47', 197)" onmouseover="showTip(event, 'fs47', 197)" class="f">variableName</span> <span class="o">?-</span> <span onmouseout="hideTip(event, 'fs53', 198)" onmouseover="showTip(event, 'fs53', 198)" class="f">spaces1</span> <span class="o">--</span> <span class="s">&quot;in&quot;</span> <span class="o">-|&gt;</span> <span onmouseout="hideTip(event, 'fs46', 199)" onmouseover="showTip(event, 'fs46', 199)" class="p">LinqQuery</span>
-</code></pre></td>
-</tr>
-</table>
+</code></pre>
 
 <p>Did you spot it? Immediately after the <code>variableName</code>, <code>--</code> has been replaced with <code>?-</code>.</p>
 
