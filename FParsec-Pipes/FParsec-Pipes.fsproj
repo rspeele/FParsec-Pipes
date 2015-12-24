@@ -55,6 +55,7 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="Pipes.fs" />
     <Compile Include="DefaultParsers.fs" />
+    <Compile Include="Many.fs" />
     <Content Include="packages.config" />
     <Content Include="app.config" />
   </ItemGroup>

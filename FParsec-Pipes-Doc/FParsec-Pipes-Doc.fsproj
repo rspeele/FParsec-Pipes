@@ -56,7 +56,6 @@
     <None Include="build.fsx" />
     <Content Include="style.css" />
     <Content Include="tips.js" />
-    <None Include="JSON.fsx" />
     <None Include="template.html" />
     <None Include="Intro.fsx" />
     <None Include="Reference.fsx" />

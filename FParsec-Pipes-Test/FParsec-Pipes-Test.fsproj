@@ -55,6 +55,7 @@
     <Compile Include="TestCapturedInputs.fs" />
     <Compile Include="TestDefaultParsers.fs" />
     <Compile Include="TestCustomDefaultParsers.fs" />
+    <Compile Include="TestMany.fs" />
     <Content Include="packages.config" />
     <Content Include="app.config" />
   </ItemGroup>
