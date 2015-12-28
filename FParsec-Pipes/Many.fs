@@ -2,19 +2,46 @@
 module FParsec.Pipes.Many
 open FParsec
 
-type ZeroOrOne =
-    | ZeroOrOne
-    static member inline ( * ) (ZeroOrOne, x) = opt %x
-    static member inline ( * ) (x, ZeroOrOne) = opt %x
+let parseManyRange min max (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+    let output = new ResizeArray<'a>(capacity = min)
+    let mutable count = 0
+    let mutable looping = count < max
+    let mutable lastStatus = ReplyStatus.Error
+    let mutable lastError = FParsec.Error.NoErrorMessages
+    let mutable exitWithError = false
+    while looping do
+        let tag = stream.StateTag
+        let reply = parser stream
+        lastStatus <- reply.Status
+        lastError <- reply.Error
+        if lastStatus = Ok then
+            output.Add(reply.Result)
+            count <- count + 1
+            looping <- count < max
+        else
+            exitWithError <- tag <> stream.StateTag
+            looping <- false
+    if not exitWithError && count >= min then Reply(output) 
+    else Reply(lastStatus, output, lastError)
 
-type Range(min : int, max : int option) =
-    static let parseManyRange min max (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
-        let mutable count = 0
-        let output = new ResizeArray<'a>(capacity = min)
-        let mutable looping = count < max
-        let mutable lastStatus = ReplyStatus.Error
-        let mutable lastError = FParsec.Error.NoErrorMessages
-        while looping do
+let parseManyRangeSepBy allowEnd min max (sep : Parser<'b, 'u>) (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+    let output = new ResizeArray<'a>(capacity = min)
+    let mutable count = 0
+    let mutable looping = count < max
+    let mutable lastStatus = ReplyStatus.Error
+    let mutable lastError = FParsec.Error.NoErrorMessages
+    let mutable exitWithError = false
+    while looping do
+        let mutable sepSucceeded = false
+        if count <> 0 then
+            let tag = stream.StateTag
+            let sepReply = sep stream
+            sepSucceeded <- sepReply.Status = Ok
+            lastStatus <- sepReply.Status
+            lastError <- sepReply.Error
+            looping <- sepSucceeded
+            exitWithError <- not sepSucceeded && tag <> stream.StateTag
+        if looping then
             let tag = stream.StateTag
             let reply = parser stream
             lastStatus <- reply.Status
@@ -24,18 +51,55 @@ type Range(min : int, max : int option) =
                 count <- count + 1
                 looping <- count < max
             else
+                exitWithError <- (not allowEnd && sepSucceeded) || tag <> stream.StateTag
                 looping <- false
-        if count >= min then Reply(output) 
-        else Reply(lastStatus, output, lastError)
+    if not exitWithError && count >= min then Reply(output) 
+    else Reply(lastStatus, output, lastError)
 
-    static let parseManyUnbounded min (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
-        let mutable count = 0
-        let output = new ResizeArray<'a>(capacity = min)
-        let mutable looping = true
-        let mutable lastStatus = ReplyStatus.Error
-        let mutable lastError = FParsec.Error.NoErrorMessages
-        let mutable failed = false
-        while looping do
+let parseManyUnbounded min (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+    let output = new ResizeArray<'a>(capacity = min)
+    let mutable count = 0
+    let mutable looping = true
+    let mutable lastStatus = ReplyStatus.Error
+    let mutable lastError = FParsec.Error.NoErrorMessages
+    let mutable exitWithError = false
+    while looping do
+        let tag = stream.StateTag
+        let reply = parser stream
+        lastStatus <- reply.Status
+        lastError <- reply.Error
+        if reply.Status = Ok then
+            if stream.StateTag = tag then
+                failwith
+                    ( "Infinite loop detected: "
+                    + "parsing an unbounded range of a parser "
+                    + "that succeeds without consuming input" )
+            output.Add(reply.Result)
+            count <- count + 1
+        else
+            exitWithError <- tag <> stream.StateTag
+            looping <- false
+    if exitWithError || count < min then Reply(lastStatus, output, lastError)
+    else Reply(output)
+
+let parseManyUnboundedSepBy allowEnd min (sep : Parser<'b, 'u>) (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+    let output = new ResizeArray<'a>(capacity = min)
+    let mutable count = 0
+    let mutable looping = true
+    let mutable lastStatus = ReplyStatus.Error
+    let mutable lastError = FParsec.Error.NoErrorMessages
+    let mutable exitWithError = false
+    while looping do
+        let mutable sepSucceeded = false
+        if count <> 0 then
+            let tag = stream.StateTag
+            let sepReply = sep stream
+            sepSucceeded <- sepReply.Status = Ok
+            lastStatus <- sepReply.Status
+            lastError <- sepReply.Error
+            looping <- sepSucceeded
+            exitWithError <- not sepSucceeded && tag <> stream.StateTag
+        if looping then 
             let tag = stream.StateTag
             let reply = parser stream
             lastStatus <- reply.Status
@@ -45,16 +109,21 @@ type Range(min : int, max : int option) =
                     failwith
                         ( "Infinite loop detected: "
                         + "parsing an unbounded range of a parser "
-                        + "that succeeds without consuming input")
+                        + "that succeeds without consuming input" )
                 output.Add(reply.Result)
                 count <- count + 1
             else
-                if stream.StateTag <> tag then
-                    failed <- true
+                exitWithError <- (not allowEnd && sepSucceeded) || tag <> stream.StateTag
                 looping <- false
-        if failed || count < min then Reply(lastStatus, output, lastError)
-        else Reply(output) 
+    if exitWithError || count < min then Reply(lastStatus, output, lastError)
+    else Reply(output)
 
+type ZeroOrOne =
+    | ZeroOrOne
+    static member inline ( * ) (ZeroOrOne, x) = opt %x
+    static member inline ( * ) (x, ZeroOrOne) = opt %x
+
+type Range(min : int, max : int option) =
     member this.Min = min
     member this.Max = max
     member this.Of (p : Parser<'a, 'u>) =
@@ -65,10 +134,17 @@ type Range(min : int, max : int option) =
 
     static member inline ( * ) (range : Range, x) = range.Of(%x)
     static member inline ( * ) (x, range : Range) = range.Of(%x)
+    static member inline ( / ) (range : Range, x) = RangeSeparatedBy(range, %x, false)
+    static member inline ( /. ) (range : Range, x) = RangeSeparatedBy(range, %x, true)
 
-and SeparatedBy<'a, 'u>(separator : Parser<'a, 'u>, variant : ManyVariant, allowEnd : bool) =
+and RangeSeparatedBy<'a, 'u>(range : Range, separator : Parser<'a, 'u>, allowEnd : bool) =
     member this.Of(parser: Parser<'b, 'u>) =
-        failwith ""
+        match range.Max with
+        | None -> parseManyUnboundedSepBy allowEnd range.Min separator parser
+        | Some max -> parseManyRangeSepBy allowEnd range.Min max separator parser
+
+    static member inline ( * ) (rangeSep : RangeSeparatedBy<_, _>, x) = rangeSep.Of(%x)
+    static member inline ( * ) (x, rangeSep : RangeSeparatedBy<_, _>) = rangeSep.Of(%x)
 
 and ManyVariant =
     | ZeroOrMore
@@ -100,6 +176,7 @@ let zeroOrMore = ZeroOrMore
 let oneOrMore = OneOrMore
 let (<=..<=) min max = Range(min, Some max)
 let atLeast min = Range(min, None)
+let exactly count = Range(count, Some count)
 
 let ``0..1`` = ZeroOrOne
 let ``0..*`` = ZeroOrMore
