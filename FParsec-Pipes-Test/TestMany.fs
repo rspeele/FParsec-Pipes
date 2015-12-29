@@ -9,7 +9,7 @@ type TestMany() =
     [<TestMethod>]
     member __.TestUnboundedRange() =
         let element = !+ "test" -+ "stuff" -|> (+)
-        let parser = element * atLeast 1 |>> List.ofSeq
+        let parser = element * qty.[1..] |>> List.ofSeq
         let comparison = many1 element
         bad parser "te" 0
         bad parser "tests" 4
@@ -22,7 +22,7 @@ type TestMany() =
     [<TestMethod>]
     member __.TestBoundedRange() =
         let element = !+ "ab" -+ "c " -|> (+)
-        let parser = element * (3 <=..<= 5) |>> List.ofSeq
+        let parser = element * qty.[3..5] |>> List.ofSeq
         good parser "abc abc abc " 12 ["abc "; "abc "; "abc "]
         bad parser "abc abc " 8
         good parser "abc abc abc abc test" 16 ["abc "; "abc "; "abc "; "abc "]
@@ -33,7 +33,7 @@ type TestMany() =
     [<TestMethod>]
     member __.TestUnboundedRangeSep() =
         let element = !+ "a" -+ "b" -|> (+)
-        let parser = element * (atLeast 1 / ',') |>> List.ofSeq
+        let parser = element * (qty.[1..] / ',') |>> List.ofSeq
         let comparison = sepBy1 element %','
         bad parser "" 0
         bad comparison "" 0
@@ -53,7 +53,7 @@ type TestMany() =
     [<TestMethod>]
     member __.TestUnboundedRangeSepEnd() =
         let element = !+ "a" -+ "b" -|> (+)
-        let parser = element * (atLeast 1 /. ',') |>> List.ofSeq
+        let parser = element * (qty.[1..] /. ',') |>> List.ofSeq
         let comparison = sepEndBy1 element %','
         bad parser "" 0
         bad comparison "" 0
@@ -73,7 +73,7 @@ type TestMany() =
     [<TestMethod>]
     member __.TestBoundedRangeSep() =
         let element = !+ "a" -+ "b" -|> (+)
-        let parser = element * ((3 <=..<= 4) / ',') |>> List.ofSeq
+        let parser = element * (qty.[3..4] / ',') |>> List.ofSeq
         let comparison = sepBy1 element %','
         bad parser "" 0
         bad parser "a" 1
@@ -88,7 +88,7 @@ type TestMany() =
     [<TestMethod>]
     member __.TestBoundedRangeSepEnd() =
         let element = !+ "a" -+ "b" -|> (+)
-        let parser = element * (atLeast 1 /. ',') |>> List.ofSeq
+        let parser = element * (qty.[1..] /. ',') |>> List.ofSeq
         let comparison = sepBy1 element %','
         bad parser "" 0
         bad parser "a" 1

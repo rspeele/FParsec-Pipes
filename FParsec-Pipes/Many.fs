@@ -146,38 +146,13 @@ and RangeSeparatedBy<'a, 'u>(range : Range, separator : Parser<'a, 'u>, allowEnd
     static member inline ( * ) (rangeSep : RangeSeparatedBy<_, _>, x) = rangeSep.Of(%x)
     static member inline ( * ) (x, rangeSep : RangeSeparatedBy<_, _>) = rangeSep.Of(%x)
 
-and ManyVariant =
-    | ZeroOrMore
-    | OneOrMore
-    member this.Of(parser : Parser<'a, 'u>) =
-        match this with
-        | ZeroOrMore -> many parser
-        | OneOrMore -> many1 parser
-    member this.SeparatedBy(parser : Parser<'a, 'u>, allowEnd : bool) =
-        ManySeparatedBy<'a, 'u>(parser, this, allowEnd)
-    static member inline ( * ) (many : ManyVariant, x) = many.Of(%x)
-    static member inline ( * ) (x, many : ManyVariant) = many.Of(%x)
-    static member inline ( / ) (many : ManyVariant, x) = many.SeparatedBy(%x, allowEnd = false)
-    static member inline ( /. ) (many : ManyVariant, x) = many.SeparatedBy(%x, allowEnd = true)
-
-and ManySeparatedBy<'a, 'u>(separator : Parser<'a, 'u>, variant : ManyVariant, allowEnd : bool) =
-    member this.Of(parser : Parser<'b, 'u>) =
-        match variant, allowEnd with
-        | ZeroOrMore, false -> sepBy parser separator
-        | OneOrMore, false -> sepBy1 parser separator
-        | ZeroOrMore, true -> sepEndBy parser separator
-        | OneOrMore, true -> sepEndBy1 parser separator
-
-    static member inline ( * ) (sep : ManySeparatedBy<_, _>, x) = sep.Of(%x)
-    static member inline ( * ) (x, sep : ManySeparatedBy<_, _>) = sep.Of(%x)
-
 let zeroOrOne = ZeroOrOne
-let zeroOrMore = ZeroOrMore
-let oneOrMore = OneOrMore
-let (<=..<=) min max = Range(min, Some max)
-let atLeast min = Range(min, None)
-let exactly count = Range(count, Some count)
 
-let ``0..1`` = ZeroOrOne
-let ``0..*`` = ZeroOrMore
-let ``1..*`` = OneOrMore
+type RangeDefiner() =
+    member this.GetSlice(min : int option, max : int option) =
+        new Range(defaultArg min 0, max)
+    member this.GetSlice(exactCount : int) =
+        new Range(exactCount, Some exactCount)
+
+let qty = RangeDefiner()
+
