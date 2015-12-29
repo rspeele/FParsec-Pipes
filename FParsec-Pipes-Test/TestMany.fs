@@ -98,4 +98,29 @@ type TestMany() =
         good parser "ab,ab,ab,ab" 11 ["ab"; "ab"; "ab"; "ab"]
         good parser "ab,ab,ab,ab," 12 ["ab"; "ab"; "ab"; "ab"]
         
+    [<TestMethod>]
+    member __.TestExactQtySep() =
+        let element = !+ "a" -+ "b" -|> (+)
+        let parser = element * (qty.[3] / ',') |>> List.ofSeq
+        bad parser "" 0
+        bad parser "a" 1
+        bad parser "ab" 2
+        bad parser "ab,ab" 5
+        bad parser "ab,a" 4
+        good parser "ab,ab,ab" 8 ["ab"; "ab"; "ab"]
+        good parser "ab,ab,ab," 8 ["ab"; "ab"; "ab"]
+        good parser "ab,ab,ab,ab" 8 ["ab"; "ab"; "ab"]
+        good parser "ab,ab,ab,ab," 8 ["ab"; "ab"; "ab"]
+
+    [<TestMethod>]
+    member __.TestExactQty() =
+        let element = !+ "a" -+ "b" -|> (+)
+        let parser = element * qty.[3]|>> List.ofSeq
+        bad parser "" 0
+        bad parser "a" 1
+        bad parser "ab" 2
+        bad parser "abab" 4
+        bad parser "aba" 3
+        good parser "ababab" 6 ["ab"; "ab"; "ab"]
+        good parser "abababab" 6 ["ab"; "ab"; "ab"]
         

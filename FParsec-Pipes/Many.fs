@@ -151,7 +151,7 @@ let zeroOrOne = ZeroOrOne
 type RangeDefiner() =
     member this.GetSlice(min : int option, max : int option) =
         new Range(defaultArg min 0, max)
-    member this.GetSlice(exactCount : int) =
+    member this.Item(exactCount : int) =
         new Range(exactCount, Some exactCount)
 
 let qty = RangeDefiner()
