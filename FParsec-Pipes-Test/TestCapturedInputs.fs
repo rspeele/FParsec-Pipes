@@ -9,7 +9,7 @@ type TestCapturedInputs() =
     [<TestMethod>]
     member __.TestOne() =
         let parser =
-            !+ "test" -|> id
+            %% +."test" -|> id
         bad parser "" 0
         bad parser "tes" 0
         bad parser " test" 0
@@ -19,7 +19,7 @@ type TestCapturedInputs() =
     [<TestMethod>]
     member __.TestTwo() =
         let parser =
-            !+ "one" -+ "two" -|> fun x y -> (x, y)
+            %% +."one" -+ "two" -|> fun x y -> (x, y)
         bad parser "" 0
         bad parser "onetw" 3
         bad parser " onetwo" 0
@@ -29,7 +29,7 @@ type TestCapturedInputs() =
     [<TestMethod>]
     member __.TestTwoWithIgnored() =
         let parser =
-            !- "one" -- "two" -+ "three" -- "four" -+ "five" -|> fun x y -> (x, y)
+            %% "one" -- "two" -+ "three" -- "four" -+ "five" -|> fun x y -> (x, y)
         bad parser "" 0
         bad parser "onetw" 3
         bad parser "onetwothree4five" "onetwothree".Length
@@ -41,7 +41,7 @@ type TestCapturedInputs() =
     [<TestMethod>]
     member __.TestThreeWithIgnored() =
         let parser =
-            !+ "one" -- "two" -+ "three" -- "four" -+ "five" -|> fun x y z -> (x, y, z)
+            %% +."one" -- "two" -+ "three" -- "four" -+ "five" -|> fun x y z -> (x, y, z)
         bad parser "" 0
         bad parser "onetw" 3
         bad parser "onetwothre" 6
@@ -55,7 +55,7 @@ type TestCapturedInputs() =
     [<TestMethod>]
     member __.TestThreeWithIgnoredAndAttempt() =
         let parser =
-            !+ "one" -- "two" -+ "three" ?- "four" -+ "five" -|> fun x y z -> (x, y, z)
+            %% +."one" -- "two" -+ "three" ?- "four" -+ "five" -|> fun x y z -> (x, y, z)
         bad parser "" 0
         bad parser "onetw" 0
         bad parser "onetwothre" 0
