@@ -10,7 +10,20 @@ open FParsec.Pipes
 
 (**
 
-# FParsec-Pipes: making FParsec parsers more concise and readable.
+# FParsec-Pipes: making FParsec parsers even more concise, consistent, and readable.
+
+[FParsec](http://www.quanttec.com/fparsec/) is an F# library for writing parsers.
+This is a library for that library. Why?
+
+Part of the appeal of parser combinator libraries like FParsec is that,
+although you are writing plain old code in a general-purpose language, you can
+write your parser following roughly the same structure as you would in
+a specialized notation for describing language grammar, like
+[EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form).
+If you squint at your parser code just right, it even looks a bit like one of those
+syntactic definition languages. Just by skimming the parser definition, you can
+get a good idea of what the language it parses looks like -- which is hard to say
+for hand-coded imperative style parsers.
 
 This library defines new operators for FParsec.
 
