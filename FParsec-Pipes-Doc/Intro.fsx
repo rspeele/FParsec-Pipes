@@ -39,21 +39,21 @@ and easier to think through.
 
 // Parses `count` digits and returns the result as an integer.
 let digits (count : int) =
-    !+ (count, digit) -|> (String >> Int32.Parse)
+    %% +.(count, digit) -|> (String >> Int32.Parse)
 
 // Parses a yyyy-mm-dd date and returns the result as a tuple of 3 integers.
 let date =
-    !+ digits(4) -- '-' -+ digits(2) -- '-' -+ digits(2)
+    %% +.digits(4) -- '-' -- +.digits(2) -- '-' -- +.digits(2)
     -|> fun yyyy mm dd -> (yyyy, mm, dd)
 
 // Parses a hh:mm:ss time and returns the result as a tuple of 3 integers.
 let time =
-    !+ digits(2) -- ':' -+ digits(2) -- ':' -+ digits(2)
+    %% +.digits(2) -- ':' -- +.digits(2) -- ':' -- +.digits(2)
     -|> fun hh mm ss -> (hh, mm, ss)
 
 // Parses a DateTime in the format yyyy-mm-ddThh:mm:ss
 let datetime : Parser<_, unit> =
-    !+ date -- 'T' -+ time
+    %% +.date -- 'T' -- +.time
     -|> fun (yyyy, mm, dd) (hh, mi, ss) ->
         new DateTime(yyyy, mm, dd, hh, mi, ss)
 (**
@@ -141,11 +141,11 @@ let vector3 : Parser<_, unit> =
     pipe           // For the vector parser, start with `pipe` again (as always).
     -- '('          
     -- spaces
-    -+ auto<float> // The `-+` operator is like `--`, but captures the output of the parser.
+    -- +.auto<float> // The `-+` operator is like `--`, but captures the output of the parser.
     -- comma
-    -+ auto<float> // You can chain together as many parsers with `--` and `-+` as you like.
+    -- +.auto<float> // You can chain together as many parsers with `--` and `-+` as you like.
     -- comma
-    -+ auto<float> // In this case we have three captures.
+    -- +.auto<float> // In this case we have three captures.
     -- spaces
     -- ')'
     // As before, we use `-|>` to end the pipeline and get a parser.
@@ -163,9 +163,9 @@ Now to write it more concisely. Putting more than one parser per line makes it f
 let vector3short : Parser<_, unit> =
     let comma = pipe -- spaces -- ',' -- spaces -|> ()
     pipe -- '(' -- spaces
-    -+ auto<float> -- comma
-    -+ auto<float> -- comma
-    -+ auto<float> -- spaces -- ')'
+    -- +.auto<float> -- comma
+    -- +.auto<float> -- comma
+    -- +.auto<float> -- spaces -- ')'
     -|> fun x y z -> { X = x; Y = y; Z = z }
 
 (**
@@ -180,10 +180,10 @@ too bad to just drop `spaces -- ',' -- spaces` in directly instead of binding a 
 *)
 
 let vector3shorter : Parser<_, unit> =
-    !- '(' -- spaces
-    -+ auto<float> -- spaces -- ',' -- spaces
-    -+ auto<float> -- spaces -- ',' -- spaces
-    -+ auto<float> -- spaces -- ')'
+    %% '(' -- spaces
+    -- +.auto<float> -- spaces -- ',' -- spaces
+    -- +.auto<float> -- spaces -- ',' -- spaces
+    -- +.auto<float> -- spaces -- ')'
     -|> fun x y z -> { X = x; Y = y; Z = z }
 
 (**
@@ -228,10 +228,10 @@ type WhichExpressionIsIt =
 
 // Not the real identifier name rules, but ignore that.
 let variableName =
-    !- (many1Satisfy (fun c -> isDigit c || isLetter c || c = '_')) -|> VariableName
+    %% (many1Satisfy (fun c -> isDigit c || isLetter c || c = '_')) -|> VariableName
 
 let linqQuery =
-    !- "from" -- spaces1 -- variableName -- spaces1 -- "in" -|> LinqQuery
+    %% "from" -- spaces1 -- variableName -- spaces1 -- "in" -|> LinqQuery
 
 let whichExpr : Parser<_, unit> =
     %[
@@ -262,7 +262,7 @@ The modification to make the parser is very simple:
 *)
 
 let linqQueryBacktracking =
-    !- "from" -- spaces1 -- variableName ?- spaces1 -- "in" -|> LinqQuery
+    %% "from" -- spaces1 -- variableName ?- spaces1 -- "in" -|> LinqQuery
 
 (**
 

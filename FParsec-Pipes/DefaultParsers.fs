@@ -74,15 +74,12 @@ let inline defaultParser x =
     let (Ignore parser) = DefaultParser %!!~~% x
     parser
 
-let inline (~%) x = defaultParser x
 let inline (~+.) x = Capture (defaultParser x)
 
 let inline (--) pipe x = pipe --- (DefaultParser %!!~~% x)
 let inline (?-) pipe x = pipe ?-- (DefaultParser %!!~~% x)
 
-let inline (-+) pipe x = pipe -- +.x
-let inline (?+) pipe x = pipe ?- +.x
-
+let inline (~%) x = defaultParser x
 let inline (~%%) x = pipe -- x
 
 let precursive defineParser =
