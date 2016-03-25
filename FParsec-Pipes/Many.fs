@@ -2,7 +2,7 @@
 module FParsec.Pipes.Many
 open FParsec
 
-let parseManyRange min max (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+let private parseManyRange min max (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
     let output = new ResizeArray<'a>(capacity = min)
     let mutable count = 0
     let mutable looping = count < max
@@ -24,7 +24,7 @@ let parseManyRange min max (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
     if not exitWithError && count >= min then Reply(output) 
     else Reply(lastStatus, output, lastError)
 
-let parseManyRangeSepBy allowEnd min max (sep : Parser<'b, 'u>) (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+let private parseManyRangeSepBy allowEnd min max (sep : Parser<'b, 'u>) (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
     let output = new ResizeArray<'a>(capacity = min)
     let mutable count = 0
     let mutable looping = count < max
@@ -56,7 +56,7 @@ let parseManyRangeSepBy allowEnd min max (sep : Parser<'b, 'u>) (parser : Parser
     if not exitWithError && count >= min then Reply(output) 
     else Reply(lastStatus, output, lastError)
 
-let parseManyUnbounded min (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+let private parseManyUnbounded min (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
     let output = new ResizeArray<'a>(capacity = min)
     let mutable count = 0
     let mutable looping = true
@@ -82,7 +82,7 @@ let parseManyUnbounded min (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
     if exitWithError || count < min then Reply(lastStatus, output, lastError)
     else Reply(output)
 
-let parseManyUnboundedSepBy allowEnd min (sep : Parser<'b, 'u>) (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
+let private parseManyUnboundedSepBy allowEnd min (sep : Parser<'b, 'u>) (parser : Parser<'a, 'u>) (stream : CharStream<'u>) =
     let output = new ResizeArray<'a>(capacity = min)
     let mutable count = 0
     let mutable looping = true
