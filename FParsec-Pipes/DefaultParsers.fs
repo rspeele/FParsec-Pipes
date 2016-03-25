@@ -55,17 +55,17 @@ let auto<'a> = DefaultParserOf<'a>.Instance
 type DefaultEnding =
     | DefaultEnding
     static member inline (-%>) (pipe, DefaultEnding) : Parser<unit, _> =
-        pipe -|> ()
+        pipe -%> ()
     static member inline (-%>) (pipe, DefaultEnding) : Parser<'a, _> =
-        pipe -|> (id : 'a -> 'a)
+        pipe -%> (id : 'a -> 'a)
     static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _, _> =
-        pipe -|> (fun a b -> (a, b))
+        pipe -%> (fun a b -> (a, b))
     static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _, _> =
-        pipe -|> (fun a b c -> (a, b, c))
+        pipe -%> (fun a b c -> (a, b, c))
     static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _, _> =
-        pipe -|> (fun a b c d -> (a, b, c, d))
+        pipe -%> (fun a b c d -> (a, b, c, d))
     static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _ * _, _> =
-        pipe -|> (fun a b c d e -> (a, b, c, d, e))
+        pipe -%> (fun a b c d e -> (a, b, c, d, e))
 
 let autofun = DefaultEnding
 

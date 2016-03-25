@@ -92,6 +92,26 @@ let private collapse (link : IPipeLink<'a, 'b, 'u>) (inp : 'a) =
 
 type Pipe<'inp, 'out, 'fn, 'r, 'u> =
     | Pipe of (IPipeLink<'inp, 'out, 'u> -> 'fn -> Parser<'r, 'u>)
+    static member (-%>) (Pipe parent, fn : 'fn) : Parser<'r, 'u> =
+        parent (link0()) fn
+
+let private supplyPipeFunction (Pipe parent) fn =
+    parent (link0()) fn : Parser<_, _>
+
+type DefaultEnding =
+    | DefaultEnding
+    static member (-%>) (pipe, DefaultEnding) : Parser<unit, _> =
+        supplyPipeFunction pipe ()
+    static member (-%>) (pipe, DefaultEnding) : Parser<'a, _> =
+        supplyPipeFunction pipe (id : 'a -> 'a)
+    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _, _> =
+        supplyPipeFunction pipe (fun a b -> (a, b))
+    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c -> (a, b, c))
+    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d -> (a, b, c, d))
+    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d e -> (a, b, c, d, e))
     
 [<GeneralizableValue>]
 let pipe<'inp, 'out, 'u> : Pipe<'inp, 'out, 'inp, 'out, 'u> =
@@ -126,8 +146,5 @@ let (--<|) (Pipe parent) fn =
     fun link ->
         parent (collapse link fn)
 
-let (-|>) (Pipe parent) fn : Parser<_, _> =
-    parent (link0()) fn
-
-let (--|>) parent fn =
-    Pipe <| (linkUp (parent -|> fn) >> supplyInput)
+let (--|>) pipe fn =
+    Pipe <| (linkUp (supplyPipeFunction pipe fn) >> supplyInput)

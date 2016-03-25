@@ -8,7 +8,7 @@ open FParsec.Pipes
 type TestMany() =
     [<TestMethod>]
     member __.TestUnboundedRange() =
-        let element = %% +."test" -- +."stuff" -|> (+)
+        let element = %% +."test" -- +."stuff" -%> (+)
         let parser = element * qty.[1..] |>> List.ofSeq
         let comparison = many1 element
         bad parser "te" 0
@@ -21,7 +21,7 @@ type TestMany() =
 
     [<TestMethod>]
     member __.TestBoundedRange() =
-        let element = %% +."ab" -- +."c " -|> (+)
+        let element = %% +."ab" -- +."c " -%> (+)
         let parser = element * qty.[3..5] |>> List.ofSeq
         good parser "abc abc abc " 12 ["abc "; "abc "; "abc "]
         bad parser "abc abc " 8
@@ -32,7 +32,7 @@ type TestMany() =
 
     [<TestMethod>]
     member __.TestUnboundedRangeSep() =
-        let element = %% +."a" -- +."b" -|> (+)
+        let element = %% +."a" -- +."b" -%> (+)
         let parser = element * (qty.[1..] / ',') |>> List.ofSeq
         let comparison = sepBy1 element %','
         bad parser "" 0
@@ -52,7 +52,7 @@ type TestMany() =
 
     [<TestMethod>]
     member __.TestUnboundedRangeSepEnd() =
-        let element = %% +."a" -- +."b" -|> (+)
+        let element = %% +."a" -- +."b" -%> (+)
         let parser = element * (qty.[1..] /. ',') |>> List.ofSeq
         let comparison = sepEndBy1 element %','
         bad parser "" 0
@@ -72,7 +72,7 @@ type TestMany() =
 
     [<TestMethod>]
     member __.TestBoundedRangeSep() =
-        let element = %% +."a" -- +."b" -|> (+)
+        let element = %% +."a" -- +."b" -%> (+)
         let parser = element * (qty.[3..4] / ',') |>> List.ofSeq
         let comparison = sepBy1 element %','
         bad parser "" 0
@@ -87,7 +87,7 @@ type TestMany() =
 
     [<TestMethod>]
     member __.TestBoundedRangeSepEnd() =
-        let element = %% +."a" -- +."b" -|> (+)
+        let element = %% +."a" -- +."b" -%> (+)
         let parser = element * (qty.[1..] /. ',') |>> List.ofSeq
         let comparison = sepBy1 element %','
         bad parser "" 0
@@ -100,7 +100,7 @@ type TestMany() =
         
     [<TestMethod>]
     member __.TestExactQtySep() =
-        let element = %% +."a" -- +."b" -|> (+)
+        let element = %% +."a" -- +."b" -%> (+)
         let parser = element * (qty.[3] / ',') |>> List.ofSeq
         bad parser "" 0
         bad parser "a" 1
@@ -114,7 +114,7 @@ type TestMany() =
 
     [<TestMethod>]
     member __.TestExactQty() =
-        let element = %% +."a" -- +."b" -|> (+)
+        let element = %% +."a" -- +."b" -%> (+)
         let parser = element * qty.[3]|>> List.ofSeq
         bad parser "" 0
         bad parser "a" 1
