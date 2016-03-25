@@ -122,26 +122,45 @@ let private supplyPipeFunction (Pipe parent) fn =
     parent (link0()) fn : Parser<_, _>
 
 /// A marker type which implements the default function to terminate a pipe
-/// of a given arity (up to 5).
+/// of a given arity (up to 9).
 type DefaultEnding =
     | DefaultEnding
     static member (-%>) (pipe, DefaultEnding) : Parser<unit, _> =
         supplyPipeFunction pipe ()
     static member (-%>) (pipe, DefaultEnding) : Parser<'a, _> =
         supplyPipeFunction pipe (id : 'a -> 'a)
-    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _, _> =
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _, _> =
         supplyPipeFunction pipe (fun a b -> (a, b))
-    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _, _> =
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _, _> =
         supplyPipeFunction pipe  (fun a b c -> (a, b, c))
-    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _, _> =
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _, _> =
         supplyPipeFunction pipe  (fun a b c d -> (a, b, c, d))
-    static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _ * _, _> =
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _ * _, _> =
         supplyPipeFunction pipe  (fun a b c d e -> (a, b, c, d, e))
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d e f -> (a, b, c, d, e, f))
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d e f g -> (a, b, c, d, e, f, g))
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _ * _ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d e f g -> (a, b, c, d, e, f, g))
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _ * _ * _ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d e f g h -> (a, b, c, d, e, f, g, h))
+    static member (-%>) (pipe, DefaultEnding)
+        : Parser<_ * _ * _ * _ * _ * _ * _ * _ * _ * _, _> =
+        supplyPipeFunction pipe  (fun a b c d e f g h i -> (a, b, c, d, e, f, g, h, i))
 
 /// A marker value which serves as the default function to terminate a pipe.
 /// When found on the right side of the `-%>` operator, this behaves equivalently
 /// to the most appropriate function for the pipe's arity - producing unit, a single
-/// value, or an n-tuple (up to n=5).
+/// value, or an n-tuple (up to n=9).
 let auto = DefaultEnding
 
 /// The starting (leftmost) value of any `Pipe`.
