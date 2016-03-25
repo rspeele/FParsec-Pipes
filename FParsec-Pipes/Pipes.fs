@@ -2,22 +2,40 @@
 module FParsec.Pipes.Pipes
 open FParsec
 
+/// Represents the right side of a pipeline, which can become a `Parser<'out,'u>`
+/// if given a value of type `'inp`. Practically speaking, `'inp` is typically
+/// a function combining the outputs of the captured parsers constituting this pipe section.
 type IPipeLink<'inp, 'out, 'u> =
+    /// Convert to a `Parser<'inp -> 'out, 'u>`. This defers the
+    /// requirement of an `'inp` value to after parsing, rather than
+    /// before creating the parser.
     abstract member ToFunctionParser : Parser<'inp -> 'out, 'u>
+    /// Create a `Parser<'out, 'u>` from an `'inp` value.
     abstract member ToOutputParser : 'inp -> Parser<'out, 'u>
+    /// Given a parser to a precede this, produce an `IPipeLink` whose `'inp` type is
+    /// a function going from the preceding parser's output to our `'inp`.
+    /// This lets us build an `IPipeLink` requiring an `a -> b -> c -> d`
+    /// from a chain of `parseA`, `parseB`, `parseC`, working right-to-left.
     abstract member LinkUp : Parser<'up, 'u> -> IPipeLink<'up -> 'inp, 'out, 'u>
+    /// Produce an `IPipeLink` that will run the given parser prior to this one's
+    /// and ignore its output.
     abstract member IgnoreUp : Parser<'up, 'u> -> IPipeLink<'inp, 'out, 'u>
 
 let private supplyInput (link : IPipeLink<_, _, _>) inp = link.ToOutputParser inp
 let private linkUp parser (link : IPipeLink<_, _, _>) = link.LinkUp parser
 let private ignoreUp parser (link : IPipeLink<_, _, _>) = link.IgnoreUp parser
 
-/// This combines parsers with more than 5 arguments.
-/// The trick is to start a new link chain from 1 on the left side, and on the right side keep a parser
-/// which produces a function taking a function taking the remaining parsed arguments.
-/// The resulting parsers will be equivalent to having written something like (example for 8 arguments):
-/// `pipe2 (pipe3 pa pb pc (fun a b c d e f g h -> final_result)) (pipe5 pd pe pf pg ph (fun d e f g h parent -> parent d e f g h)) (|>)`
-let rec private linkBeyond5<'a, 'b, 'f, 'u> (functionLink : IPipeLink<'a, 'b, 'u>) (parseRemaining : Parser<'b -> 'f, 'u>) : IPipeLink<'a, 'f, 'u> =
+// This combines parsers with more than 5 arguments.
+// The trick is to start a new link chain from 1 on the left side, and on the right side keep a parser
+// which produces a function taking a function taking the remaining parsed arguments.
+// The resulting parsers will be equivalent to having written something like (example for 8 arguments):
+//     pipe2
+//         (pipe3 pa pb pc (fun a b c d e f g h -> final_result))
+//         (pipe5 pd pe pf pg ph (fun d e f g h parent -> parent d e f g h)) (|>)
+let rec private linkBeyond5<'a, 'b, 'f, 'u>
+    (functionLink : IPipeLink<'a, 'b, 'u>)
+    (parseRemaining : Parser<'b -> 'f, 'u>)
+    : IPipeLink<'a, 'f, 'u> =
     { new IPipeLink<'a, 'f, 'u> with
         member __.ToFunctionParser = pipe2 (functionLink.ToFunctionParser) parseRemaining (>>)
         member __.ToOutputParser f = pipe2 (functionLink.ToOutputParser f) parseRemaining (|>)
@@ -90,14 +108,21 @@ let rec link0 () =
 let private collapse (link : IPipeLink<'a, 'b, 'u>) (inp : 'a) =
     link.ToOutputParser inp |> link1
 
+/// Represents a chain of parsers that can be converted to a single parser,
+/// if given a value of type `'fn`. `'fn` is typically a function
+/// that takes the captured inputs accumulated by the parser chain
+/// and combines them into a single output.
 type Pipe<'inp, 'out, 'fn, 'r, 'u> =
     | Pipe of (IPipeLink<'inp, 'out, 'u> -> 'fn -> Parser<'r, 'u>)
+    /// Provide the pipe with the function it requires to become a parser.
     static member (-%>) (Pipe parent, fn : 'fn) : Parser<'r, 'u> =
         parent (link0()) fn
 
 let private supplyPipeFunction (Pipe parent) fn =
     parent (link0()) fn : Parser<_, _>
 
+/// A marker type which implements the default function to terminate a pipe
+/// of a given arity (up to 5).
 type DefaultEnding =
     | DefaultEnding
     static member (-%>) (pipe, DefaultEnding) : Parser<unit, _> =
@@ -112,21 +137,34 @@ type DefaultEnding =
         supplyPipeFunction pipe  (fun a b c d -> (a, b, c, d))
     static member (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _ * _, _> =
         supplyPipeFunction pipe  (fun a b c d e -> (a, b, c, d, e))
-    
+
+/// A marker value which serves as the default function to terminate a pipe.
+/// When found on the right side of the `-%>` operator, this behaves equivalently
+/// to the most appropriate function for the pipe's arity - producing unit, a single
+/// value, or an n-tuple (up to n=5).
+let auto = DefaultEnding
+
+/// The starting (leftmost) value of any `Pipe`.
+/// This contains no parsers, so if terminated immediately, it will `preturn`
+/// the value supplied as a terminator.
 [<GeneralizableValue>]
 let pipe<'inp, 'out, 'u> : Pipe<'inp, 'out, 'inp, 'out, 'u> =
-    Pipe <| supplyInput
+    Pipe supplyInput
 
+/// Append a parser to a pipe, capturing its output.
 let (|-+) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         parent (linkUp parser link) fn
 
+/// Append a parser to a pipe, ignoring its output.
 let (|--) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         parent (ignoreUp parser link) fn
 
+/// Append a parser to a pipe, capturing its output, and wrapping the
+/// pipe on the left in `attempt`.
 let (|?+) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
@@ -134,6 +172,8 @@ let (|?+) (Pipe parent) (parser : Parser<_, _>) =
         let next = (linkUp parser link).ToFunctionParser
         pipe2 (attempt first) next (|>)
 
+/// Append a parser to a pipe, ignoring its output, and wrapping the
+/// pipe on the left in `attempt`.
 let (|?-) (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
@@ -141,10 +181,16 @@ let (|?-) (Pipe parent) (parser : Parser<_, _>) =
         let next = (ignoreUp parser link).ToFunctionParser
         pipe2 (attempt first) next (|>)
 
+/// Supply a function partway through a pipe that combines the
+/// captured inputs following it.
+/// This operator is virtually never useful and is included only for symmetry.
 let (--<|) (Pipe parent) fn =
     Pipe <|
     fun link ->
         parent (collapse link fn)
 
+/// Supply a function partway through a pipe that combines the
+/// captured inputs preceding it.
+/// This operator is rarely useful.
 let (--|>) pipe fn =
     Pipe <| (linkUp (supplyPipeFunction pipe fn) >> supplyInput)

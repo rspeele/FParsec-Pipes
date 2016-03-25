@@ -8,49 +8,49 @@ open FParsec.Pipes
 type TestDefaultParsers() =
     [<TestMethod>]
     member __.TestInt64() =
-        let parser = %auto<int64>
+        let parser = %p<int64>
         bad parser "" 0
         bad parser "a" 0
         good parser "123" 3 123L
 
     [<TestMethod>]
     member __.TestUInt64() =
-        let parser = %auto<uint64>
+        let parser = %p<uint64>
         bad parser "" 0
         bad parser "a" 0
         good parser "123" 3 123UL
 
     [<TestMethod>]
     member __.TestInt32() =
-        let parser = %auto<int32>
+        let parser = %p<int32>
         bad parser "" 0
         bad parser "a" 0
         good parser "123" 3 123
 
     [<TestMethod>]
     member __.TestUInt32() =
-        let parser = %auto<uint32>
+        let parser = %p<uint32>
         bad parser "" 0
         bad parser "a" 0
         good parser "123" 3 123u
 
     [<TestMethod>]
     member __.TestInt16() =
-        let parser = %auto<int16>
+        let parser = %p<int16>
         bad parser "" 0
         bad parser "a" 0
         good parser "123" 3 123s
 
     [<TestMethod>]
     member __.TestUInt16() =
-        let parser = %auto<uint16>
+        let parser = %p<uint16>
         bad parser "" 0
         bad parser "a" 0
         good parser "123" 3 123us
 
     [<TestMethod>]
     member __.TestFloat() =
-        let parser = %auto<float>
+        let parser = %p<float>
         bad parser "" 0
         good parser "1" 1 1.0
         good parser "1.0" 3 1.0
@@ -59,7 +59,7 @@ type TestDefaultParsers() =
 
     [<TestMethod>]
     member __.TestChar() =
-        let parser = %auto<char>
+        let parser = %p<char>
         bad parser "" 0
         good parser "a" 1 'a'
         good parser "b" 1 'b'

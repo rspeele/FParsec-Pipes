@@ -7,18 +7,18 @@ open FParsec.Pipes
 type CustomA =
     | CustomA of float
     static member DefaultParser =
-        %% "a:" -- spaces -- +.auto<float> -%> CustomA
+        %% "a:" -- spaces -- +.p<float> -%> CustomA
 
 type CustomB =
     | CustomB of char
     static member DefaultParser =
-        %% "b:" -- spaces -- +.auto<char> -%> CustomB
+        %% "b:" -- spaces -- +.p<char> -%> CustomB
 
 [<TestClass>]
 type TestCustomDefaultParsers() =
     [<TestMethod>]
     member __.TestCustomA() =
-        let parser = %auto<CustomA>
+        let parser = %p<CustomA>
         bad parser "" 0
         bad parser "a" 0
         bad parser "a: " 3
@@ -28,7 +28,7 @@ type TestCustomDefaultParsers() =
 
     [<TestMethod>]
     member __.TestCustomB() =
-        let parser = %auto<CustomB>
+        let parser = %p<CustomB>
         bad parser "" 0
         bad parser "a" 0
         bad parser "b" 0

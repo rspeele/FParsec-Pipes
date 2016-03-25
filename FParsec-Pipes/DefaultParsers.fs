@@ -2,11 +2,13 @@
 module FParsec.Pipes.DefaultParsers
 open FParsec
 
+/// Represents a parser whose output is ignored within a pipeline.
 type Ignore<'a, 'u> =
     | Ignore of Parser<'a, 'u>
     static member (---) (pipe, Ignore (p : Parser<'a, 'u>)) = pipe |-- p
     static member (?--) (pipe, Ignore (p : Parser<'a, 'u>)) = pipe |?- p
 
+/// Reprsents a parser whose output is captured within a pipeline.
 type Capture<'a, 'u> =
     | Capture of Parser<'a, 'u>
     static member (---) (pipe, Capture (p : Parser<'a, 'u>)) = pipe |-+ p
@@ -50,38 +52,42 @@ and DefaultParser =
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^a >) =
         DefaultParser %!!~~% (null : CustomDefaultParserOf< ^a >)
 
-let auto<'a> = DefaultParserOf<'a>.Instance
+/// Represents the default parser for the given type.
+/// If the type `'a` has a default parser implemented, `p<'a>`
+/// can be converted to a `Parser<'a, 'u>` with the % operator,
+/// e.g. `%p<int>`.
+let p<'a> = DefaultParserOf<'a>.Instance
 
-type DefaultEnding =
-    | DefaultEnding
-    static member inline (-%>) (pipe, DefaultEnding) : Parser<unit, _> =
-        pipe -%> ()
-    static member inline (-%>) (pipe, DefaultEnding) : Parser<'a, _> =
-        pipe -%> (id : 'a -> 'a)
-    static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _, _> =
-        pipe -%> (fun a b -> (a, b))
-    static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _, _> =
-        pipe -%> (fun a b c -> (a, b, c))
-    static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _, _> =
-        pipe -%> (fun a b c d -> (a, b, c, d))
-    static member inline (-%>) (pipe, DefaultEnding) : Parser<_ * _ * _ * _ * _, _> =
-        pipe -%> (fun a b c d e -> (a, b, c, d, e))
-
-let autofun = DefaultEnding
-
-/// Create a parser from x, if there is a single sensible parser possible.
+/// Create a parser from `x`, if there is a single sensible parser possible.
+/// For example, `defaultParser "str"` is equivalent to `pstring str`.
 let inline defaultParser x =
     let (Ignore parser) = DefaultParser %!!~~% x
     parser
 
+/// Converts its argument to a parser via `defaultParser` and
+/// marks the result as a captured input, which can be consumed
+/// by the function at the end of a pipe.
 let inline (~+.) x = Capture (defaultParser x)
 
-let inline (--) pipe x = pipe --- (DefaultParser %!!~~% x)
-let inline (?-) pipe x = pipe ?-- (DefaultParser %!!~~% x)
+/// Chains `parser` onto `pipe`.
+/// `parser` will be converted to a parser and may be captured or ignored based
+/// on whether `+.` was used on it.
+let inline (--) pipe parser = pipe --- (DefaultParser %!!~~% parser)
 
+/// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`.
+/// `parser` will be converted to a parser and may be captured or ignored based
+/// on whether `+.` was used on it.
+let inline (?-) pipe parser = pipe ?-- (DefaultParser %!!~~% parser)
+
+/// Creates a pipe starting with `parser`. Shorthand for `pipe -- parser`.
+let inline (~%%) parser = pipe -- parser
+
+/// Prefix operator equivalent to `defaultParser x`.
 let inline (~%) x = defaultParser x
-let inline (~%%) x = pipe -- x
 
+/// Defines a self-referential parser given `defineParser`, which returns a parser given its own output parser.
+/// The parser that will be passed to `defineParser` is a `createParserForwardedToRef()` pointed at a reference
+/// that will be assigned to `defineParser`'s output.
 let precursive defineParser =
     let p, pref = createParserForwardedToRef()
     pref := defineParser p
