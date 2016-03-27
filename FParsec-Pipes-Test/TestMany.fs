@@ -83,7 +83,7 @@ type TestMany() =
         good parser "ab,ab,ab" 8 ["ab"; "ab"; "ab"]
         bad parser "ab,ab,ab," 9
         good parser "ab,ab,ab,ab" 11 ["ab"; "ab"; "ab"; "ab"]
-        good parser "ab,ab,ab,ab," 11
+        good parser "ab,ab,ab,ab," 11 ["ab"; "ab"; "ab"; "ab"]
 
     [<TestMethod>]
     member __.TestBoundedRangeSepEnd() =
