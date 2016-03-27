@@ -154,34 +154,62 @@ let pipe<'inp, 'out, 'u> : Pipe<'inp, 'out, 'inp, 'out, 'u> =
     Pipe supplyInput
 
 /// Append a parser to a pipe, capturing its output.
-let (|-+) (Pipe parent) (parser : Parser<_, _>) =
+let appendCapture (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         parent (linkUp parser link) fn
 
 /// Append a parser to a pipe, ignoring its output.
-let (|--) (Pipe parent) (parser : Parser<_, _>) =
+let appendIgnore (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         parent (ignoreUp parser link) fn
 
-/// Append a parser to a pipe, capturing its output, and wrapping the
-/// pipe on the left in `attempt`.
-let (|?+) (Pipe parent) (parser : Parser<_, _>) =
+/// Append a parser to a pipe, capturing its output, with backtracking
+/// up to the point that the added parser runs.
+/// If the parsers before this one in the pipe fail, even after changing
+/// the parser state, the entire pipe will be backtracked.
+let appendCaptureBacktrackLeft (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         let first = parent(link0()) fn
         let next = (linkUp parser link).ToFunctionParser
         pipe2 (attempt first) next (|>)
 
-/// Append a parser to a pipe, ignoring its output, and wrapping the
-/// pipe on the left in `attempt`.
-let (|?-) (Pipe parent) (parser : Parser<_, _>) =
+/// Append a parser to a pipe, ignoring its output, with backtracking
+/// up to the point that the added parser runs.
+/// If the parsers before this one in the pipe fail, even after changing
+/// the parser state, the entire pipe will be backtracked.
+let appendIgnoreBacktrackLeft (Pipe parent) (parser : Parser<_, _>) =
     Pipe <|
     fun link fn ->
         let first = parent(link0()) fn
         let next = (ignoreUp parser link).ToFunctionParser
         pipe2 (attempt first) next (|>)
+
+/// Append a parser to a pipe, capturing its output, with backtracking
+/// up to the point that the added parser has consumed input.
+/// If the parsers before this one in the pipe fail, even after changing the parser state,
+/// or if the added parser fails before changing the parser state, the entire pipe will
+/// be backtracked.
+let appendCaptureBacktrackRight (Pipe parent) (parser : Parser<_, _>) =
+    Pipe <|
+    fun link fn ->
+        let first = parent(link0()) fn
+        let next = (linkUp parser link).ToFunctionParser
+        attempt first .>>.? next |>> (fun (f, n) -> f |> n)
+
+/// Append a parser to a pipe, ignoring its output, with backtracking
+/// up to the point that the added parser has consumed input.
+/// If the parsers before this one in the pipe fail, even after changing the parser state,
+/// or if the added parser fails before changing the parser state, the entire pipe will
+/// be backtracked.
+let appendIgnoreBacktrackRight (Pipe parent) (parser : Parser<_, _>) =
+    Pipe <|
+    fun link fn ->
+        let first = parent(link0()) fn
+        let next = (ignoreUp parser link).ToFunctionParser
+        attempt first .>>.? next |>> (fun (f, n) -> f |> n)
 
 /// Supply a function partway through a pipe that combines the
 /// captured inputs following it.

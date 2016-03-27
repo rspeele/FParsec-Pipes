@@ -5,14 +5,16 @@ open FParsec
 /// Represents a parser whose output is ignored within a pipeline.
 type Ignore<'a, 'u> =
     | Ignore of Parser<'a, 'u>
-    static member (---) (pipe, Ignore (p : Parser<'a, 'u>)) = pipe |-- p
-    static member (?--) (pipe, Ignore (p : Parser<'a, 'u>)) = pipe |?- p
+    static member (---) (pipe, Ignore (p : Parser<'a, 'u>)) = appendIgnore pipe p
+    static member (?--) (pipe, Ignore (p : Parser<'a, 'u>)) = appendIgnoreBacktrackLeft pipe p
+    static member (--?) (pipe, Ignore (p : Parser<'a, 'u>)) = appendIgnoreBacktrackRight pipe p
 
 /// Reprsents a parser whose output is captured within a pipeline.
 type Capture<'a, 'u> =
     | Capture of Parser<'a, 'u>
-    static member (---) (pipe, Capture (p : Parser<'a, 'u>)) = pipe |-+ p
-    static member (?--) (pipe, Capture (p : Parser<'a, 'u>)) = pipe |?+ p
+    static member (---) (pipe, Capture (p : Parser<'a, 'u>)) = appendCapture pipe p
+    static member (?--) (pipe, Capture (p : Parser<'a, 'u>)) = appendCaptureBacktrackLeft pipe p
+    static member (--?) (pipe, Capture (p : Parser<'a, 'u>)) = appendCaptureBacktrackRight pipe p
 
 [<AllowNullLiteral>]
 type DefaultParserOf<'a>() =
@@ -78,6 +80,12 @@ let inline (--) pipe parser = pipe --- (DefaultParser %!!~~% parser)
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (?-) pipe parser = pipe ?-- (DefaultParser %!!~~% parser)
+
+/// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`
+/// or `parser` fails without changing the parser state.
+/// `parser` will be converted to a parser and may be captured or ignored based
+/// on whether `+.` was used on it.
+let inline (-?) pipe parser = pipe --? (DefaultParser %!!~~% parser)
 
 /// Creates a pipe starting with `parser`. Shorthand for `pipe -- parser`.
 let inline (~%%) parser = pipe -- parser
