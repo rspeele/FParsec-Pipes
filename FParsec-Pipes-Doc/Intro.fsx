@@ -10,65 +10,51 @@ open FParsec.Pipes
 
 (**
 
-# FParsec-Pipes: making FParsec parsers even more concise, consistent, and readable.
+# FParsec-Pipes: making FParsec parsers even more concise and consistent.
 
 [FParsec](http://www.quanttec.com/fparsec/) is an F# library for writing parsers.
-This is a library for that library. Why?
+This library extends FParsec with a new set of combinators, which
+I believe make it even easier to translate from a formal grammar like
+[EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form)
+to F# parsing code and end up with a fast, highly readable parser.
 
-Part of the appeal of parser combinator libraries like FParsec is that,
-although you are writing plain old code in a general-purpose language, you can
-write your parser following roughly the same structure as you would in
-a specialized notation for describing language grammar, like
-[EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form).
-If you squint at your parser code just right, it even looks a bit like one of those
-syntactic definition languages. Just by skimming the parser definition, you can
-get a good idea of what the language it parses looks like -- which is hard to say
-for hand-coded imperative style parsers.
+## Show me an example
 
-This library defines new operators for FParsec.
-
-Some of these operators make defining common parsers, like those based
-on `pstring`, `pchar`, and `choice`, nearly automatic.
-
-Others make the task of composing parsers together more consistent
-and easier to think through.
-
-## What does a parser look like written with these operators?
+Here's a parser for ISO-8601-formatted datetimes.
 
 *)
 
 // Parses `count` digits and returns the result as an integer.
 let digits (count : int) =
-    %% +.(count, digit) -|> (String >> Int32.Parse)
+    %% +.(count, digit)
+    -%> (String >> Int32.Parse)
 
 // Parses a yyyy-mm-dd date and returns the result as a tuple of 3 integers.
 let date =
-    %% +.digits(4) -- '-' -- +.digits(2) -- '-' -- +.digits(2)
-    -|> fun yyyy mm dd -> (yyyy, mm, dd)
+    %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2
+    -%> auto
 
 // Parses a hh:mm:ss time and returns the result as a tuple of 3 integers.
 let time =
-    %% +.digits(2) -- ':' -- +.digits(2) -- ':' -- +.digits(2)
-    -|> fun hh mm ss -> (hh, mm, ss)
+    %% +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
+    -%> auto
 
 // Parses a DateTime in the format yyyy-mm-ddThh:mm:ss
 let datetime : Parser<_, unit> =
     %% +.date -- 'T' -- +.time
-    -|> fun (yyyy, mm, dd) (hh, mi, ss) ->
+    -%> fun (yyyy, mm, dd) (hh, mi, ss) ->
         new DateTime(yyyy, mm, dd, hh, mi, ss)
+
 (**
 
-## How do I use it?
-
-If you don't already know FParsec or another parser combinator library, learn that first
-from its excellent [tutorial](http://www.quanttec.com/fparsec/tutorial.html).
-
-For this library, there are two main things to learn, plus a third bonus thing you can usually ignore.
+## What are the features?
 
 ### Default parsers for values
 
-First, you can use the prefix operator `%` on many types of values to
-create the parser that sensibly corresponds to that value. For example:
+The unary operator `%` can be used to convert various values to the "obvious" corresponding parser.
+This cuts down on clutter from explicitly using `pstring`, `pchar`, and others.
+See the examples below:
+
 *)
 // Expression:              // Equivalent to:
 %"bob"                      // pstring "bob"
@@ -81,22 +67,22 @@ create the parser that sensibly corresponds to that value. For example:
 (**
 
 The value you pass to `%` can also be of type `DefaultParserOf<'a>`, which you
-can obtain by using `auto<'a>`. If `'a` is a supported type, the resulting
+can obtain by using `p<'a>`. If `'a` is a supported type, the resulting
 parser will be one to parse any `'a`.
 
 This works for several primitive types, including all integer types.
 
 *)
 
-// Expression:    // Equivalent to:
-%auto<int>        // pint32
-%auto<uint16>     // puint16
-%auto<float>      // pfloat
-%auto<Position>   // getPosition
+// Expression:  // Equivalent to:
+%p<int>         // pint32
+%p<uint16>      // puint16
+%p<float>       // pfloat
+%p<Position>    // getPosition
 
 (**
 
-You can make `auto` work for your own types, too. Simply define:
+You can make `p` work for your own types, too. Simply define:
 
 `static member DefaultParser : Parser<'a, 'u>`
 
@@ -108,174 +94,202 @@ type Vector3D =
         Y : float
         Z : float
     }
+    // Parses a vector in the format (x, y, z)
     static member DefaultParser =
         let comma = spaces >>. %',' >>. spaces
         pipe3
-            (%'(' >>. spaces >>. %auto<float>)
-            (comma >>. %auto<float>)
-            (comma >>. %auto<float> .>> spaces .>> %')')
+            (%'(' >>. spaces >>. %p<float>)
+            (comma >>. %p<float>)
+            (comma >>. %p<float> .>> spaces .>> %')')
             (fun x y z -> { X = x; Y = y; Z = z })
 
-%auto<Vector3D> // equivalent to Vector3D.DefaultParser
+%p<Vector3D> // equivalent to Vector3D.DefaultParser
 
 (**
 ### Pipes
 
-Notice that the above example used the function `pipe3`, and the combinators `>>.` and `.>>`.
+Notice that the above `DefaultParser` example used the function `pipe3`, and the combinators `>>.` and `.>>`.
+Using vanilla FParsec, when you want to make a parser like "`parserA` followed by `parserB` followed by `parserC`",
+you must choose between `>>.`, `.>>`, `.>>.`, `pipe2` through `pipe5`, or `tuple2` through `tuple5`, depending on which
+of the chained parsers you want to consume the output of.
 
-The main feature of FParsec-Pipes is a set of operators that replace those for most use cases.
+This means that two parsers written to consume the same grammar may look quite different, if their authors
+had different requirements about how much information to capture in their output [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
+A "recognizer" that simply validates the source passed to it will have a very different structure from a parser that produces an AST.
 
-Let's see how the same parser would be written with those operators - first, with verbose comments.
+FParsec-Pipes replaces all such sequencing combinators with "pipes", so named because they fill the purpose of the `pipe2` family of operators.
+The rules for combining parsers with these operators are simple:
+
+* Start the pipe with `%%` followed by the first parser.
+* Add additional parsers to the pipe with the `--` operator.
+* "Capture" parser outputs in the pipe with the `+.` prefix operator.
+* Complete the pipe with `-%>` by supplying a function to combine all the "captured" outputs.
+
+All the operators use `%` to convert their operands to parsers, so you can use raw characters and strings
+in the pipeline. Here's the rewritten version of the `Vector3D` parser.
 *)
 
-let vector3 : Parser<_, unit> =
-    let comma =
-        pipe      // `pipe` starts a pipeline of parsers.
-        -- spaces // The `--` operator adds a parser to the pipeline, ignoring its output.
-        -- ','    // `--` automatically applies `%` to the value on its right side.
-        -- spaces
-        -|> ()    // `-|>` ends the pipeline, turning it into a parser.
-                  // In this case, since the pipeline has no captures (all parsers are ignored)
-                  // we just give it a value for the parser to return.
-
-    pipe           // For the vector parser, start with `pipe` again (as always).
-    -- '('          
-    -- spaces
-    -- +.auto<float> // The `-+` operator is like `--`, but captures the output of the parser.
-    -- comma
-    -- +.auto<float> // You can chain together as many parsers with `--` and `-+` as you like.
-    -- comma
-    -- +.auto<float> // In this case we have three captures.
-    -- spaces
-    -- ')'
-    // As before, we use `-|>` to end the pipeline and get a parser.
-    // This time, though, we need to supply a function that takes our three captures
-    // and returns the output type of our parser. This is the same function
-    // that we gave to `pipe3` in the earlier example.
-    -|> fun x y z -> { X = x; Y = y; Z = z }
-
-(**
-
-Now to write it more concisely. Putting more than one parser per line makes it fairly compact.
-
-*)
-
-let vector3short : Parser<_, unit> =
-    let comma = pipe -- spaces -- ',' -- spaces -|> ()
-    pipe -- '(' -- spaces
-    -- +.auto<float> -- comma
-    -- +.auto<float> -- comma
-    -- +.auto<float> -- spaces -- ')'
-    -|> fun x y z -> { X = x; Y = y; Z = z }
-
-(**
-
-Every pipeline starts with `pipe -- x` or, if the first parser needs to be captured, `pipe -+ x`.
-These can be replaced with the prefix operators `!-` and `!+` respectively.
-`!- x` is equivalent to `pipe -- x`.
-
-Also, at this point the amount of clutter in the parser is low enough that it doesn't look
-too bad to just drop `spaces -- ',' -- spaces` in directly instead of binding a separate `comma` parser.
-
-*)
-
-let vector3shorter : Parser<_, unit> =
+let vector3pipe : Parser<_, unit> =
     %% '(' -- spaces
-    -- +.auto<float> -- spaces -- ',' -- spaces
-    -- +.auto<float> -- spaces -- ',' -- spaces
-    -- +.auto<float> -- spaces -- ')'
-    -|> fun x y z -> { X = x; Y = y; Z = z }
+    -- +.p<float> -- spaces -- ',' -- spaces
+    -- +.p<float> -- spaces -- ',' -- spaces
+    -- +.p<float> -- spaces -- ')'
+    -%> fun x y z -> { X = x; Y = y; Z = z }
 
 (**
 
-### Backtracking
+Sometimes it's overkill to write a function to combine the captured outputs of a pipe.
+Maybe the pipe has no outputs, or only one, or you just need a tuple.
 
-At this point you can glue together most parsers just using these operators. There are a few nice things about this:
-
-* To see what tokens get parsed, you always just read left-to-right and top-to-bottom.
-
-* You can rapidly find which parsers contributed the inputs to the function at the end of the pipe by looking for `+` signs.
-
-* The way to structure a sequence of parsers is obvious. You can always start by writing a parser that ignores all its constituent parsers' outputs.
-  If you need to capture the output of some of the parsers, just change the operator preceding those parsers to end with a `+` and update
-  the function at the end of the pipeline to take the resulting additional parameter.
-
-Basically, the promise is that if you have `parserA` followed by `parserB`, you can _always_ express that with
-the same code structure (a binary operator between the two) -- whether you care about their outputs or not.
-
-One question is: what if you need to add backtracking?
-In many cases, this can be avoided altogether, and this is the best approach for performance reasons.
-
-However, suppose that you are parsing a language like C#, in which "from" could mean something very different in two expressions that
-could easily appear in the same context:
-
-* `from` as a variable name, as in `from.ToString()`.
-* `from` as the keyword which begins a LINQ query expression, as in `from x in new[] { 1, 2, 3 } select x * x`.
-
-In this case, you will most likely want to attempt the more complex second possibility, and, if it does not pan out,
-backtrack to the start of "from" before parsing it as a variable identifier. This isn't the only way to do this -- you can still
-parse these expressions without backtracking -- but it's the clearest way to code it and thus preferred barring performance constraints.
-
-You might write something like this simplified example. Of course, a real parser would need to include a full C# AST,
-use the real rules for identifiers, and so on, but the point here is just to demonstrate backtracking, so let's
-pretend all we care about is distinguishing variable names from LINQ queries.
+For pipes with no outputs, you can give any value to `-%>` and that value will be returned from the parser on success.
+This is like the `>>%` operator in FParsec.
 
 *)
 
-type WhichExpressionIsIt =
-    | VariableName
-    | LinqQuery
+let unitexample : Parser<unit, unit> =
+    %% "this pipe" -- "has no" -- "captures" -%> ()
 
-// Not the real identifier name rules, but ignore that.
-let variableName =
-    %% (many1Satisfy (fun c -> isDigit c || isLetter c || c = '_')) -|> VariableName
-
-let linqQuery =
-    %% "from" -- spaces1 -- variableName -- spaces1 -- "in" -|> LinqQuery
-
-let whichExpr : Parser<_, unit> =
-    %[
-        // choice between a...
-        linqQuery
-        // or a...
-        variableName
-    ]
+// Always produces the value 1337 on success
+let constexample : Parser<int, unit> =
+    %% "some text" -%> 1337
 
 (**
 
-This won't work. Given the input text `"from . ToString()"`,
-the first choice will _start to succeed_ by parsing the string `"from"` and some spaces.
-
-It will then fail by reading a `'.'` instead of a valid `variableName` character, but by then it's too late.
-The start of the string has already been consumed.
-
-The solution to this is to add backtracking to the first parser, and for that, the critical question to ask yourself is:
-
-"At what point am I _certain_ that this is the right parser to be applying?"
-
-In this case, having read the string `"from"`, you don't know that this is going to be a LINQ query.
-Having read the following whitespace, you _still_ don't know that this is going to be a LINQ query.
-But once you've read another variable name, you can be confident that this is either a LINQ query (`from variableName in ...`) or a syntax error.
-
-The modification to make the parser is very simple:
+For pipes with 1 to 5 outputs, you can automatically combine them into a tuple by using
+`auto` as the terminating value.
 
 *)
 
-let linqQueryBacktracking =
-    %% "from" -- spaces1 -- variableName ?- spaces1 -- "in" -|> LinqQuery
+// Parses an int
+let auto1example : Parser<_, unit> =
+    %% "this pipe" -- "has one" -- +.p<int> -- "capture"
+    -%> auto
+
+// Parse a tuple (float, int)
+let auto2example : Parser<_, unit> =
+    %% "this pipe" -- +.p<float> -- "has two" -- +.p<int> -- "captures"
+    -%> auto
+
+(**
+### Backtracking with pipes
+
+Sometimes it is necessary to backtrack in a parser.
+For example, suppose that at a given place in a file format, it is valid to find either
+a date/time in ISO 8601 format, or a Unix timestamp as a 64-bit integer.
+
+Here is one attempt at this:
+
+*)
+
+type Timestamp =
+    | UnixTimestamp of int64
+    | CalendarTimestamp of DateTime
+
+let unixTimestamp = %% +.p<int64> -%> UnixTimestamp
+let calendarTimestamp =
+    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)
+    %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
+    -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
+    -%> fun yyyy mm dd h m s ->
+        new DateTime(yyyy, mm, dd, h, m, s) |> CalendarTimestamp
+
+let timestamp : Parser<_, unit> =
+    %[calendarTimestamp; unixTimestamp]
 
 (**
 
-Did you spot it? Immediately after the `variableName`, `--` has been replaced with `?-`.
+The problem with this approach is that, given the Unix timestamp input `1458730894`,
+the first part of `calendarTimestamp` will succeed since it successfully parses 4 digits.
+It will fail when it encounters `7` as the next character instead of the expected `-`,
+but since it's already consumed input and advanced the parser state, the alternative
+`unixTimestamp` parser will not be attempted.
 
-Here's what that means: whenever you have `?-` or `?+` instead of `--` or `-+`,
-_the entire chunk of the pipeline prior to that operator_ will be wrapped in `attempt` ,
-meaning that if any of its constituent parsers fail, the input stream will backtrack to the start
-of the pipeline.
+The solution is to add backtracking to `calendarTimestamp`. What we want is to ensure that,
+until we've seen the first `-`, the whole pipe can be backtracked to the beginning.
 
-Of course, if you need to, you could always just break your pipeline into pieces and apply `attempt` or
-the FParsec operators `>>?`, `.>>?`, or `.>>.?` to handle your backtracking. However, I believe `?-` and
-`?+` in pipelines should cover most if not all backtracking needs.
+Vanilla FParsec provides the `attempt`, `>>?`, `.>>?`, and `.>>.?` combinators for this type of situation.
+However, there's no need to abandon the pipe syntax -- it supports backtracking too, with the `?-` and `-?` operators.
+
+The `?-` operator wraps everything to its left in `attempt`.
 
 *)
 
+let calendarTimestampBacktrack1 : Parser<_, unit> =
+    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)
+    %% +.digits 4 -- '-' ?- +.digits 2 -- '-' -- +.digits 2 -- 'T'
+                      // ^^ Backtrack the whole pipe if anything to the left of this fails.
+    -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
+    -%> fun yyyy mm dd h m s ->
+        new DateTime(yyyy, mm, dd, h, m, s) |> CalendarTimestamp
+
+(**
+
+The `-?` also wraps everything to its left in `attempt`, but also joins its left and right
+together using `.>>.?`, so that if the right side fails _without changing the parser state_,
+the pipe will backtrack to the beginning.
+
+This is a bit harder to understand, but can sometimes produce better error messages.
+
+*)
+
+let calendarTimestampBacktrack2 : Parser<_, unit> =
+    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)
+    %% +.digits 4 -? '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
+                  // ^^ Backtrack the whole pipe if anything to the left of this fails,
+                  // or if the parser to the right fails without changing the parser state.
+    -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
+    -%> fun yyyy mm dd h m s ->
+        new DateTime(yyyy, mm, dd, h, m, s) |> CalendarTimestamp
+
+(**
+
+You can think of `?-` and `-?` as marking the end of ambiguity.
+
+`?-` says "if we've gotten this far, we're definitely looking at something that is *supposed* to
+match this parser, and if it doesn't, that's a syntax error."
+
+`-?` is similar, but changes the condition to "if we've gotten this far, *and* the next little bit doesn't *immediately* look wrong".
+
+### Repetition and separation
+
+FParsec includes many combinators for defining parsers like "zero or more of `parserA`" or
+"one or more of `parserA` separated by `parserB`". These include `many`, `many1`, `sepBy`, and `sepEndBy`.
+
+FParsec-Pipes uses F#'s slice notation to handle the concept of ranges.
+You can slice into `qty` to get a `Range` object, and multiply a parser
+(or a value that can be converted to a parser with `%`) by that range.
+
+The resulting parser parses a `System.Collections.Generic.List` (not an F# list) of values.
+
+*)
+
+'a' * qty.[3]    // parse exactly 3 'a's   -- similar to `parray 3 %'a'`
+'a' * qty.[1..]  // parse one or more 'a's -- similar to `many1 %'a'`
+'a' * qty.[0..]  // parse 0 or more 'a's   -- similar to `many %'a'`
+'a' * qty.[..5]  // parse up to 5 'a's
+'a' * qty.[3..6] // parse at least 3 and at most 6 'a's
+qty.[3] * 'a'    // the range can be on either side of the *
+
+(**
+
+For separation, `/` is also overloaded on ranges.
+Another variant, `/.`, allows (but does not require) a separator to appear after the last element.
+
+Mathematically this is of course nonsense, but `/` was chosen because
+you can say that the elements are "divided" by their separators, in the
+same way that a fence divides pieces of property.
+
+*)
+
+'a' * (qty.[0..] / ',') // parse 0 or more 'a's separated by ','s
+                        // similar to sepBy %'a' %','
+
+qty.[0..] / ',' * 'a'   // same as above, just written in a different order
+                        // this may be preferable as it doesn't require parentheses
+
+qty.[1..] /. ',' * 'a'  // parse one or more 'a's separated by ','s, with an optional trailing ','
+                        // similar to sepEndBy1 %'a' %','
+
+let comma() = %% "," -- spaces -%> ()
+let element() = %% 'a' -- spaces -%> ()
+in qty.[2..10] / comma() * element() // parse 2 to 10 'a's separated by commas, with whitespace allowed
