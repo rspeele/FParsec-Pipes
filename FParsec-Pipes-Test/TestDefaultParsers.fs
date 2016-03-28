@@ -96,3 +96,18 @@ type TestDefaultParsers() =
         bad parser "z" 0
         good parser "x" 1 'x'
         good parser "y" 1 'y'
+
+    [<TestMethod>]
+    member __.TestStringCI() =
+        let parser = %ci "test"
+        bad parser "blah" 0
+        good parser "test" 4 "test"
+        good parser "Test" 4 "Test"
+        good parser "TEST" 4 "TEST"
+
+    [<TestMethod>]
+    member __.TestCharCI() =
+        let parser = %ci 'a'
+        bad parser "b" 0
+        good parser "a" 1 'a'
+        good parser "A" 1 'A'

@@ -2,6 +2,23 @@
 module FParsec.Pipes.DefaultParsers
 open FParsec
 
+type CaseInsensitive<'a> =
+    | CaseInsensitive of 'a
+
+/// Mark `x` as being case insensitive.
+/// Useful for use with `%`. For example `%ci "test"` is equivalent
+/// to `pstringCI "test"`, while `%"test"` is equivalent to `pstring "test"`.
+let ci x = CaseInsensitive x
+
+/// Parse a character case insensitively. Returns the parsed character.
+let pcharCI c : Parser<char, 'u> =
+    let cfs = Text.FoldCase(c : char)
+    fun stream ->
+        let index0 = stream.IndexToken
+        if stream.SkipCaseFolded(cfs) then
+             Reply(stream.Peek(-1))
+        else Reply(Error, expectedString (string c))
+
 /// Represents a parser whose output is ignored within a pipeline.
 type Ignore<'a, 'u> =
     | Ignore of Parser<'a, 'u>
@@ -32,10 +49,18 @@ and DefaultParser =
 
     static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal |> Ignore
     static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal |> Ignore
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> Ignore
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> Ignore
     static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate |> Ignore
 
-    static member inline (%!!~~%) (DefaultParser, anyOfThese : char list) = anyOf anyOfThese |> Ignore
-    static member inline (%!!~~%) (DefaultParser, anyOfThese : string list) = choice (List.map pstring anyOfThese) |> Ignore
+    static member inline (%!!~~%) (DefaultParser, anyOfThese : char list) =
+        anyOf anyOfThese |> Ignore
+    static member inline (%!!~~%) (DefaultParser, anyOfThese : string list) =
+        choice (List.map pstring anyOfThese) |> Ignore
+    static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<char> list) =
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) |> Ignore
+    static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<string> list) =
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) |> Ignore
 
     static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser |> Ignore
 
