@@ -22,7 +22,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\FParsec_Pipes.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\FParsec-Pipes.XML</DocumentationFile>
     <StartArguments />
     <OtherFlags>--sig:bin/generated.fsi</OtherFlags>
   </PropertyGroup>

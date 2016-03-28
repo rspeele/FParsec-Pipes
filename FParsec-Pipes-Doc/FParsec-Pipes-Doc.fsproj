@@ -58,7 +58,6 @@
     <Content Include="tips.js" />
     <None Include="template.html" />
     <None Include="Intro.fsx" />
-    <None Include="Reference.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpFormat">
