@@ -1,0 +1,6 @@
+{
+  "name": "FParsec-Pipes",
+  "tagline": "A set of operators for FParsec (http://www.quanttec.com/fparsec/) intended to simplify chaining parsers together.",
+  "body": "# FParsec-Pipes\r\n\r\nThis library is an extension to the FParsec library (http://www.quanttec.com/fparsec/).\r\n\r\nFParsec-Pipes does not define new parsers.\r\nInstead, its goal is to make it easier and more readable to define your own parsers.\r\n\r\n## Why should I care? Show me some code I can write with this.\r\n\r\n```fsharp\r\nlet pdatetime =\r\n    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)\r\n    %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'\r\n    -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2\r\n    -%> fun yyyy mm dd h m s ->\r\n        new DateTime(yyyy, mm, dd, h, m, s)\r\n```\r\n\r\n\r\n\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
