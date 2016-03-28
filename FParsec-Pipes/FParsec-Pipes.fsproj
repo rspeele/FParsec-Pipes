@@ -34,7 +34,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\FParsec_Pipes.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FParsec-Pipes.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -58,7 +58,7 @@
     <Compile Include="DefaultParsers.fs" />
     <Compile Include="Many.fs" />
     <Content Include="packages.config" />
-    <Content Include="app.config" />
+    <None Include="FParsec-Pipes.nuspec" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FParsec">
