@@ -58,7 +58,9 @@ See the examples below:
 *)
 // Expression:              // Equivalent to:
 %"bob"                      // pstring "bob"
+%ci "jim"                   // pstringCI "jim" (case insensitive)
 %'b'                        // pchar 'b'
+%ci 'b'                     // pcharCI 'b' (case insensitive)
 %['a'; 'b']                 // anyOf "ab"
 %["alice"; "bob"]           // choice [pstring "alice"; pstring "bob"]
 %[pint32; preturn (-1)]     // choice [pint32; preturn (-1)]
