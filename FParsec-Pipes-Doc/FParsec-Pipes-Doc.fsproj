@@ -60,6 +60,7 @@
     <None Include="Intro.fsx" />
     <None Include="Reference.fsx" />
     <None Include="SQLite.fsx" />
+    <None Include="GraphQL.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpFormat">
