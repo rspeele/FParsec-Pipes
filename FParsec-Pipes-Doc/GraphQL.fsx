@@ -52,7 +52,7 @@ let ignored1 = skipMany1 ignoredToken
 // Parses ignored tokens in the stream, if any.
 let ignored = skipMany ignoredToken
 
-let inline (-%) pipe parser = pipe -- ignored -- parser
+let inline (-..-) pipe parser = pipe -- ignored -- parser
 
 (**
 
@@ -124,7 +124,7 @@ let numericValue =
         NumberLiteralOptions.AllowMinusSign
         ||| NumberLiteralOptions.AllowExponent
         ||| NumberLiteralOptions.AllowFraction
-    let invalidLeadingZero = new Regex(@"-?0[0-9]")
+    let invalidLeadingZero = new Regex(@"^-?0[0-9]")
     numberLiteral numberOptions "numeric literal"
     >>= fun literal ->
         if invalidLeadingZero.IsMatch(literal.String) then
@@ -210,10 +210,8 @@ we'll take it as an argument.
 *)
 
 let listValue (value : Parser<Value, _>) =
-    let listElement =
-        %% +.value -- ignored -%> auto
     %% '['
-    -% +.(listElement * qty.[0..])
+    -..- +.(qty.[0..] /.ignored * value)
     -- ']'
     -%> ListValue
 
@@ -226,13 +224,11 @@ Object values are nearly identical to list values, but include property names.
 let objectValue (value : Parser<Value, _>) =
     let objectField =
         %% +.name
-        -% ':'
-        -% +.value
-        -- ignored
+        -..- ':'
+        -..- +.value
         -%> auto
     %% '{'
-    -- ignored
-    -- +.(objectField * qty.[0..])
+    -..- +.(qty.[0..] /. ignored * objectField)
     -- '}'
     -%> (dict >> ObjectValue)
 
@@ -269,7 +265,7 @@ type Argument =
         ArgumentValue : Value
     }
 
-let opts parser =
+let optionalMany parser =
     %[
         parser
         preturn (new ResizeArray<_>())
@@ -278,11 +274,11 @@ let opts parser =
 let arguments =
     let argument =
         %% +.name
-        -% ':'
-        -% +.value -- ignored
+        -..- ':'
+        -..- +.value
         -%> fun name value ->
             { ArgumentName = name; ArgumentValue = value }
-    %% '(' -% +.(argument * qty.[1..]) -- ')'
+    %% '(' -..- +.(qty.[1..] /. ignored * argument) -- ')'
     -%> auto
 
 type Directive =
@@ -294,10 +290,10 @@ type Directive =
 let directives =
     let directive =
         %% '@' -- +.name
-        -% +.opts arguments -- ignored
+        -..- +.optionalMany arguments
         -%> fun name args ->
             { DirectiveName = name; Arguments = args }
-    directive * qty.[1..]
+    qty.[0..] /. ignored * directive
 
 type FragmentName = string
 
@@ -314,8 +310,8 @@ type FragmentSpread =
 
 let fragmentSpread =
     %% "..."
-    -% +.name
-    -% +.opts directives
+    -..- +.name
+    -..- +.optionalMany directives
     -%> fun name dirs ->
         { FragmentName = name; Directives = dirs }
 
@@ -344,9 +340,9 @@ let field selections : Parser<_, _> =
     let alias = %% +.name -- ignored -? ':' -- ignored -%> auto
     %% +.(alias * zeroOrOne)
     -- +.name
-    -% +.opts arguments
-    -% +.opts directives
-    -% +.opts selections
+    -..- +.optionalMany arguments
+    -..- +.directives
+    -..- +.optionalMany selections
     -%> fun alias name args dirs sels ->
         {
             Alias = alias
@@ -357,13 +353,13 @@ let field selections : Parser<_, _> =
         }
 
 let typeCondition =
-    %% "on" -% +.name -%> auto
+    %% "on" -..- +.name -%> auto
 
 let inlineFragment selections =
     %% "..."
-    -% +.(typeCondition * zeroOrOne)
-    -% +.opts directives
-    -% +.selections
+    -..- +.(typeCondition * zeroOrOne)
+    -..- +.directives
+    -..- +.selections
     -%> fun typeCond dirs sels ->
         {
             TypeCondition = typeCond
@@ -373,12 +369,12 @@ let inlineFragment selections =
 
 let selections = precursive <| fun selections ->
     let selection =
-        %[
+        %% +.[
             %% +.field selections -%> FieldSelection
             %% +.fragmentSpread -%> FragmentSpreadSelection
             %% +.inlineFragment selections -%> InlineFragmentSelection
-        ]
-    %% '{' -% +.(selection * qty.[1..]) -% '}' -%> auto
+        ] -- ignored -%> auto
+    %% '{' -..- +.(qty.[1..] * selection) -..- '}' -%> auto
 
 type CoreTypeDescription =
     | NamedType of TypeName
@@ -391,7 +387,7 @@ and TypeDescription =
 
 let coreTypeDescription typeDescription =
     let listType =
-        %% '[' -% +.(typeDescription * qty.[1..]) -% ']' -%> ListType
+        %% '[' -..- +.(qty.[1..] * typeDescription) -..- ']' -%> ListType
     let namedType =
         %% +.name -%> NamedType
     %[
@@ -401,7 +397,7 @@ let coreTypeDescription typeDescription =
 
 let typeDescription = precursive <| fun typeDescription ->
     %% +.coreTypeDescription typeDescription
-    -% +.('!' * zeroOrOne)
+    -..- +.('!' * zeroOrOne)
     -- ignored
     -%> fun desc bang ->
         {
@@ -418,14 +414,14 @@ type VariableDefinition =
 
 let defaultValue =
     %% '='
-    -% +.value
+    -..- +.value
     -%> auto
 
 let variableDefinition =
     %% +.variableName
-    -% ':'
-    -% +.typeDescription
-    -% +.(defaultValue * zeroOrOne)
+    -..- ':'
+    -..- +.typeDescription
+    -..- +.(defaultValue * zeroOrOne)
     -- ignored
     -%> fun variable ty defaultVal ->
         {
@@ -436,7 +432,7 @@ let variableDefinition =
 
 let variableDefinitions =
     %% '('
-    -% +.(variableDefinition * qty.[1..])
+    -..- +.(qty.[1..] * variableDefinition)
     -- ')'
     -%> auto
 
@@ -461,10 +457,10 @@ type LonghandOperation =
 
 let longhandOperation =
     %% +.operationType
-    -% +.(name * zeroOrOne)
-    -% +.opts variableDefinitions
-    -% +.opts directives
-    -% +.opts selections
+    -..- +.(name * zeroOrOne)
+    -..- +.optionalMany variableDefinitions
+    -..- +.optionalMany directives
+    -..- +.optionalMany selections
     -%> fun ty name varDefs dirs sels ->
         {
             Type = ty
@@ -494,10 +490,10 @@ type Fragment =
 
 let fragment =
     %% "fragment"
-    -% +.fragmentName
-    -% +.typeCondition
-    -% +.opts directives
-    -% +.selections
+    -..- +.fragmentName
+    -..- +.typeCondition
+    -..- +.optionalMany directives
+    -..- +.selections
     -%> fun name typeCond dirs sels ->
         {
             FragmentName = name
@@ -515,6 +511,11 @@ let definition : Parser<Definition, unit> =
         %% +.operation -%> OperationDefinition
         %% +.fragment -%> FragmentDefinition
     ]
+
+let definitions =
+    %% ignored
+    -- +.(qty.[0..] /. ignored * definition)
+    -%> auto
 
 (**
 *)
