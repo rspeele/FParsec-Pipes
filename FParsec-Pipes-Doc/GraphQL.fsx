@@ -58,9 +58,57 @@ let inline (-..-) pipe parser = pipe -- ignored -- parser
 
 Next, we have literal values and names, the building blocks of any language.
 
-First we must define a type to hold the parsed values.
+First we must define a type to hold the parsed values. A practical parser should always
+include source information (at least line numbers) in the parsed AST, so that code
+consuming the AST can can produce useful warnings or errors when it encounters constructs
+that are semantically invalid, like type mismatches or unresolved variable names.
+
+We'll define our own types to carry this information, so that callers don't need to directly reference
+FParsec's `Position` type. We'll also use helpers to wrap unadorned parsers with source information.
 
 *)
+
+type SourcePosition =
+    {
+        Index : int64
+        Line : int64
+        Column : int64
+    }
+
+type SourceInfo =
+    {
+        StartPosition : SourcePosition
+        EndPosition : SourcePosition
+    }
+
+// Translates from FParsec's position type to our own.
+let sourcePosition =
+    %% +.p<Position>
+    -%> fun pos -> { Index = pos.Index; Line = pos.Line; Column = pos.Column }
+
+type WithSource<'a> =
+    {
+        Source : SourceInfo
+        Value : 'a
+    }
+
+// Wraps any parser with source information.
+let withSource (parser : Parser<'a, unit>) =
+    %% +.sourcePosition
+    -- +.parser
+    -- +.sourcePosition
+    -%> fun startPos value endPos ->
+        {
+            Source = { StartPosition = startPos; EndPosition = endPos }
+            Value = value
+        }
+
+// Most of the time when we need to put source info on an AST element
+// it's because it's within a list, therefore the SourceInfo of its containing
+// element will be too general to direct the user to the problem location.
+// Because of how common this is, we define the type alias `ListWithSource` for a list of
+// elements with source info on each one.
+type ListWithSource<'a> = ResizeArray<WithSource<'a>>
 
 type Value =
     | Variable of string
@@ -69,8 +117,8 @@ type Value =
     | StringValue of string
     | BooleanValue of bool
     | EnumValue of string
-    | ListValue of ResizeArray<Value>
-    | ObjectValue of IDictionary<string, Value>
+    | ListValue of Value ListWithSource
+    | ObjectValue of IDictionary<string, Value WithSource>
 
 (**
 
@@ -110,8 +158,7 @@ let variable =
 
 (**
 
-Both float and int parsers can be implemented to match the
-[spec]
+Both float and int parsers can be implemented to match the spec
 by way of FParsec's `numberLiteral` parser.
 
 We use some extra validation to ensure that zero does not appear before another
@@ -211,7 +258,7 @@ we'll take it as an argument.
 
 let listValue (value : Parser<Value, _>) =
     %% '['
-    -..- +.(qty.[0..] /.ignored * value)
+    -..- +.(qty.[0..] /.ignored * withSource value)
     -- ']'
     -%> ListValue
 
@@ -222,10 +269,11 @@ Object values are nearly identical to list values, but include property names.
 *)
 
 let objectValue (value : Parser<Value, _>) =
+    let sourceValue = withSource value
     let objectField =
         %% +.name
         -..- ':'
-        -..- +.value
+        -..- +.sourceValue
         -%> auto
     %% '{'
     -..- +.(qty.[0..] /. ignored * objectField)
@@ -235,7 +283,7 @@ let objectValue (value : Parser<Value, _>) =
 (**
 
 Now that we have all the different types of values defined, they can be unified into
-one with a recursive parser definition.
+a general value parser with a recursive definition.
 
 *)
 
@@ -252,8 +300,25 @@ let value = precursive <| fun value ->
 
 (**
 
-Now that we have values, let's work on building up to definitions.
-Step 1 is to define the types we'll be parsing.
+The spec also defines a "const" variant of the value parser, which excludes variables
+and lists/objects containing variables. Because our list and object parsers are parameterized
+this is trivial to implement.
+
+*)
+
+let valueConst = precursive <| fun valueConst ->
+    %[
+        numericValue
+        stringValue
+        booleanValue
+        enumValue
+        listValue valueConst
+        objectValue valueConst
+    ]
+
+(**
+
+Now that we have values, let's keep building up to full queries.
 
 *)
 
@@ -278,13 +343,13 @@ let arguments =
         -..- +.value
         -%> fun name value ->
             { ArgumentName = name; ArgumentValue = value }
-    %% '(' -..- +.(qty.[1..] /. ignored * argument) -- ')'
+    %% '(' -..- +.(qty.[1..] /. ignored * withSource argument) -- ')'
     -%> auto
 
 type Directive =
     {
         DirectiveName : string
-        Arguments : Argument ResizeArray
+        Arguments : Argument ListWithSource
     }
 
 let directives =
@@ -293,7 +358,7 @@ let directives =
         -..- +.optionalMany arguments
         -%> fun name args ->
             { DirectiveName = name; Arguments = args }
-    qty.[0..] /. ignored * directive
+    qty.[0..] /. ignored * withSource directive
 
 type FragmentName = string
 
@@ -305,7 +370,7 @@ let fragmentName =
 type FragmentSpread =
     {
         FragmentName : FragmentName
-        Directives : Directive ResizeArray
+        Directives : Directive ListWithSource
     }
 
 let fragmentSpread =
@@ -321,9 +386,9 @@ type Field =
     {
         Alias : string option
         FieldName : string
-        Arguments : Argument ResizeArray
-        Directives : Directive ResizeArray
-        Selections : Selection ResizeArray
+        Arguments : Argument ListWithSource
+        Directives : Directive ListWithSource
+        Selections : Selection ListWithSource
     }
 and Selection =
     | FieldSelection of Field
@@ -332,8 +397,8 @@ and Selection =
 and InlineFragment =
     {
         TypeCondition : TypeName option
-        Directives : Directive ResizeArray
-        Selections : Selection ResizeArray
+        Directives : Directive ListWithSource
+        Selections : Selection ListWithSource
     }
 
 let field selections : Parser<_, _> =
@@ -374,7 +439,7 @@ let selections = precursive <| fun selections ->
             %% +.fragmentSpread -%> FragmentSpreadSelection
             %% +.inlineFragment selections -%> InlineFragmentSelection
         ] -- ignored -%> auto
-    %% '{' -..- +.(qty.[1..] * selection) -..- '}' -%> auto
+    %% '{' -..- +.(qty.[1..] /. ignored * withSource selection) -- '}' -%> auto
 
 type CoreTypeDescription =
     | NamedType of TypeName
@@ -414,7 +479,7 @@ type VariableDefinition =
 
 let defaultValue =
     %% '='
-    -..- +.value
+    -..- +.valueConst
     -%> auto
 
 let variableDefinition =
@@ -422,7 +487,6 @@ let variableDefinition =
     -..- ':'
     -..- +.typeDescription
     -..- +.(defaultValue * zeroOrOne)
-    -- ignored
     -%> fun variable ty defaultVal ->
         {
             VariableName = variable
@@ -432,7 +496,7 @@ let variableDefinition =
 
 let variableDefinitions =
     %% '('
-    -..- +.(qty.[1..] * variableDefinition)
+    -..- +.(qty.[1..] /. ignored * withSource variableDefinition)
     -- ')'
     -%> auto
 
@@ -450,9 +514,9 @@ type LonghandOperation =
     {
         Type : OperationType
         Name : string option
-        VariableDefinitions : VariableDefinition ResizeArray
-        Directives : Directive ResizeArray
-        Selections : Selection ResizeArray
+        VariableDefinitions : VariableDefinition ListWithSource
+        Directives : Directive ListWithSource
+        Selections : Selection ListWithSource
     }
 
 let longhandOperation =
@@ -471,7 +535,7 @@ let longhandOperation =
         }
 
 type Operation =
-    | ShorthandOperation of Selection ResizeArray
+    | ShorthandOperation of Selection ListWithSource
     | LonghandOperation of LonghandOperation
 
 let operation =
@@ -484,8 +548,8 @@ type Fragment =
     {
         FragmentName : string
         TypeCondition : TypeName
-        Directives : Directive ResizeArray
-        Selections : Selection ResizeArray
+        Directives : Directive ListWithSource
+        Selections : Selection ListWithSource
     }
 
 let fragment =
@@ -514,7 +578,7 @@ let definition : Parser<Definition, unit> =
 
 let definitions =
     %% ignored
-    -- +.(qty.[0..] /. ignored * definition)
+    -- +.(qty.[0..] /. ignored * withSource definition)
     -%> auto
 
 (**
