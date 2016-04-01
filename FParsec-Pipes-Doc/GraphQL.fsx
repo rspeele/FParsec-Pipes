@@ -47,11 +47,17 @@ let ignoredToken =
         comment
     ]
 
-// Parses ignored tokens in the stream, requiring at least one.
-let ignored1 = skipMany1 ignoredToken
 // Parses ignored tokens in the stream, if any.
 let ignored = skipMany ignoredToken
 
+(**
+
+We'll frequently be allowing ignored tokens in between other parsers,
+so let's define an inline operator to make this easier.
+
+*)
+
+/// Chain `parser` onto `pipe` with ignored tokens allowed to precede it.
 let inline (-..-) pipe parser = pipe -- ignored -- parser
 
 (**
@@ -320,22 +326,22 @@ let valueConst = precursive <| fun valueConst ->
 
 Now that we have values, let's keep building up to full queries.
 
+An [argument](https://facebook.github.io/graphql/#sec-Language.Arguments)
+is a named value. It is found in an argument list, which looks like this:
+    (arg1: value1, arg2: value2)
+Remember, however, that the commas are entirely optional, since they are ignored tokens.
+
 *)
 
-// An argument is a named value.
-
+/// Represents an `argName: argValue` pair
 type Argument =
     {
         ArgumentName : string
         ArgumentValue : Value
     }
 
-let optionalMany parser =
-    %[
-        parser
-        preturn (new ResizeArray<_>())
-    ]
-
+/// Parses an argument list wrapped in parentheses. Per the GraphQL spec,
+/// this list must contain at least one argument.
 let arguments =
     let argument =
         %% +.name
@@ -346,12 +352,34 @@ let arguments =
     %% '(' -..- +.(qty.[1..] /. ignored * withSource argument) -- ')'
     -%> auto
 
+(**
+
+The
+[spec on directives](https://facebook.github.io/graphql/#sec-Language.Directives)
+explains that they can be used to describe additional information for fields, fragments, and operations.
+
+A directive looks like this:
+    @dirName
+Or, with arguments:
+    @dirName(arg1: value1, arg2: value2)
+
+*)
 type Directive =
     {
         DirectiveName : string
         Arguments : Argument ListWithSource
     }
 
+/// Runs the given list parser, which parses a list of one or more elements,
+/// or returns an empty list. This is useful when a list is optional but must
+/// contain at least one item if it is present, which is common in GraphQL.
+let optionalMany parser =
+    %[
+        parser
+        preturn (new ResizeArray<_>())
+    ]
+
+/// Parses a list of 0 or more directives.
 let directives =
     let directive =
         %% '@' -- +.name
@@ -360,12 +388,33 @@ let directives =
             { DirectiveName = name; Arguments = args }
     qty.[0..] /. ignored * withSource directive
 
+(**
+
+[Fragments](https://facebook.github.io/graphql/#sec-Language.Fragments)
+define reusable selections of fields.
+
+They can be given names, which are allowed to be anything except "on".
+We'll add this validation to our usual `name` parser.
+
+*)
+
 type FragmentName = string
 
 let fragmentName =
     name >>= fun name ->
         if name = "on" then fail "fragment name may not be `on`"
         else preturn name
+
+(**
+
+A fragment spread references a named fragment, bringing its fields into the current selection scope.
+
+It looks like:
+    ...fragmentName
+Or, with directives:
+    ...fragmentName @dir1 @dir2(arg1:value1)
+
+*)
 
 type FragmentSpread =
     {
@@ -379,6 +428,10 @@ let fragmentSpread =
     -..- +.optionalMany directives
     -%> fun name dirs ->
         { FragmentName = name; Directives = dirs }
+
+(**
+
+*)
 
 type TypeName = string
 
