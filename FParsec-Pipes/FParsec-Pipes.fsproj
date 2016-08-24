@@ -57,6 +57,7 @@
     <Compile Include="Pipes.fs" />
     <Compile Include="DefaultParsers.fs" />
     <Compile Include="Many.fs" />
+    <Compile Include="Precedence.fs" />
     <Content Include="packages.config" />
     <None Include="FParsec-Pipes.nuspec" />
   </ItemGroup>

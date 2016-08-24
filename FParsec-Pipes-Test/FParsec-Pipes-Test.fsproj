@@ -57,6 +57,7 @@
     <Compile Include="TestDefaultEnding.fs" />
     <Compile Include="TestCustomDefaultParsers.fs" />
     <Compile Include="TestMany.fs" />
+    <Compile Include="TestPrecedence.fs" />
     <Content Include="packages.config" />
     <Content Include="app.config" />
   </ItemGroup>
