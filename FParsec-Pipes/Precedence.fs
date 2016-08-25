@@ -20,23 +20,31 @@ module FParsec.Pipes.Precedence
 open FParsec
 
 type Associativity =
-    private
     | LeftAssociative
     | RightAssociative
 
-type Fixity<'e> =
-    private
-    | Infix of Associativity * ('e -> 'e -> 'e)
-    | Prefix of ('e -> 'e)
-    | Postfix of ('e -> 'e)
+type Fixity<'e, 'o, 'u> =
+    | Prefix of Parser<'o, 'u> * ('e -> 'e)
+    | Postfix of Parser<'o, 'u> * ('e -> 'e)
+    | Infix of Associativity * Parser<'o, 'u> * ('e -> 'e -> 'e)
+    | Ternary of Associativity * Parser<'o, 'u> * Parser<'o, 'u> * ('e -> 'e -> 'e -> 'e)
 
-let infixr make = Infix (RightAssociative, make)
-let infixrt make = Infix (RightAssociative, fun x y -> make (x,y))
-let infixl make = Infix (LeftAssociative, make)
-let infixlt make = Infix (LeftAssociative, fun x y -> make (x,y))
+let inline infixr parser make = Infix (RightAssociative, %parser |>> ignore, make)
+let inline infixrt parser make = Infix (RightAssociative, %parser |>> ignore, fun x y -> make (x, y))
+let inline infixl parser make = Infix (LeftAssociative, %parser |>> ignore, make)
+let inline infixlt parser make = Infix (LeftAssociative, %parser |>> ignore, fun x y -> make (x, y))
 
-let prefix make = Prefix make
-let postfix make = Postfix make
+let inline prefix parser make = Prefix (%parser |>> ignore, make)
+let inline postfix parser make = Postfix (%parser |>> ignore, make)
+
+let inline ternaryl left right make =
+    Ternary (LeftAssociative, %left |>> ignore, %right |>> ignore, make)
+let inline ternarylt left right make =
+    Ternary (LeftAssociative, %left |>> ignore, %right |>> ignore, fun x y z -> make (x, y, z))
+let inline ternaryr left right make =
+    Ternary (RightAssociative, %left |>> ignore, %right |>> ignore, make)
+let inline ternaryrt left right make =
+    Ternary (RightAssociative, %left |>> ignore, %right |>> ignore, fun x y z -> make (x, y, z))
 
 type OperatorTable<'e, 'o, 'u> =
     {
@@ -48,7 +56,7 @@ type OperatorTable<'e, 'o, 'u> =
         Whitespace : Parser<unit, 'u>
         /// All suppported operators, from highest to lowest precedence (i.e. multiplication before addition).
         /// Operators in the same sub-list have equal precedence.
-        Operators : (Parser<'o, 'u> * 'e Fixity) list list
+        Operators : Fixity<'e, 'o, 'u> list list
     }
 
 type private FastPrefixOperator<'e> =
@@ -57,11 +65,20 @@ type private FastPrefixOperator<'e> =
         Precedence : int
     }
 
-type private FastTrailingOperator<'e> =
-    | InfixTrailing of int * ('e -> 'e -> 'e)
-    | PostfixTrailing of ('e -> 'e)
+type private TernaryTrailing<'e, 'o, 'u> =
+    {
+        MinInnerPrecedence : int
+        RightOperator : Parser<'o, 'u>
+        MinRightPrecedence : int
+        Make : 'e -> 'e -> 'e -> 'e
+    }
 
-type private FastOperatorTable<'e, 'u> =
+type private FastTrailingOperator<'e, 'o, 'u> =
+    | PostfixTrailing of ('e -> 'e)
+    | InfixTrailing of int * ('e -> 'e -> 'e)
+    | TernaryTrailing of TernaryTrailing<'e, 'o, 'u>
+
+type private FastOperatorTable<'e, 'o, 'u> =
     {
         /// Function which, given the overall expression parser,
         /// will produce the parser for a simple term (i.e. literal, ident, or parenthesized subexpr).
@@ -70,7 +87,7 @@ type private FastOperatorTable<'e, 'u> =
         /// Array indexed by minimum precedence.
         /// Value at `[i]` is a parser that will consume any infix or suffix operator of at least `i` precedence,
         /// consuming trailing whitespace, if any.
-        TrailingOperators : Parser<'e FastTrailingOperator, 'u> array
+        TrailingOperators : Parser<FastTrailingOperator<'e, 'o, 'u>, 'u> array
         /// Parses any prefix operator and trailing whitespace, if any.
         PrefixOperator : Parser<'e FastPrefixOperator, 'u>
     }
@@ -82,24 +99,37 @@ let private fastOperatorTable (table : OperatorTable<_, _, _>) =
         table.Operators |> List.toArray |> Array.rev
     let prefixOps =
         [| for prec, ops in opsByPrecedence |> Seq.indexed do
-            for parser, fixity in ops do
+            for fixity in ops do
                 match fixity with
-                | Prefix make -> yield parser .>> ws >>% { Make = make; Precedence = prec }
-                | Infix _ | Postfix _ -> ()
+                | Prefix (parser, make) -> yield parser .>> ws >>% { Make = make; Precedence = prec }
+                | Postfix _ | Infix _ | Ternary _  -> ()
         |]
     let trailingOps = Array.zeroCreate opsByPrecedence.Length
     for prec = trailingOps.Length - 1 downto 0 do
         let operators =
-            [| for parser, fixity in opsByPrecedence.[prec] do
+            [| for fixity in opsByPrecedence.[prec] do
                 match fixity with
                 | Prefix _ -> ()
-                | Infix (assoc, make) ->
+                | Postfix (parser, make) -> yield parser .>> ws >>% PostfixTrailing make
+                | Infix (assoc, parser, make) ->
                     let nextPrec =
                         match assoc with
                         | LeftAssociative -> prec + 1
                         | RightAssociative -> prec
                     yield parser .>> ws >>% InfixTrailing (nextPrec, make)
-                | Postfix make -> yield parser .>> ws >>% PostfixTrailing make
+                | Ternary (assoc, left, right, make) ->
+                    let trailing =
+                        {
+                            MinInnerPrecedence = prec
+                            RightOperator = right .>> ws
+                            MinRightPrecedence =
+                                match assoc with
+                                | LeftAssociative -> prec + 1
+                                | RightAssociative -> prec
+                            Make = make
+                        } |> TernaryTrailing
+                    yield left .>> ws >>% trailing
+                        
             |]
         let afterHigher =
             if prec + 1 >= trailingOps.Length then id else (<|>) trailingOps.[prec + 1]
@@ -110,7 +140,7 @@ let private fastOperatorTable (table : OperatorTable<_, _, _>) =
         PrefixOperator = choice prefixOps
     }
 
-let private fastOperatorParser (table : FastOperatorTable<'e, 'u>) =
+let private fastOperatorParser (table : FastOperatorTable<'e, _, 'u>) =
     let ofSelf expr =
         let term = table.Term expr
         let trailingParts : Parser<'e -> 'e, 'u> array =
@@ -128,8 +158,15 @@ let private fastOperatorParser (table : FastOperatorTable<'e, 'u>) =
             output
         for i, trailing in table.TrailingOperators |> Seq.indexed do
             let nextPart = function
-                | InfixTrailing (minRightPrecedence, make) -> exprParts.[minRightPrecedence] |>> (fun x y -> make y x)
-                | PostfixTrailing make -> preturn make
+                | PostfixTrailing make ->
+                    preturn make
+                | InfixTrailing (minRightPrecedence, make) ->
+                    exprParts.[minRightPrecedence] |>> fun x y -> make y x
+                | TernaryTrailing ternary ->
+                    %% +.exprParts.[ternary.MinInnerPrecedence]
+                    -- ternary.RightOperator
+                    -- +.exprParts.[ternary.MinRightPrecedence]
+                    -%> fun inner right left -> ternary.Make left inner right
             trailingParts.[i] <-
                 table.TrailingOperators.[i] >>= nextPart
             exprParts.[i] <-
