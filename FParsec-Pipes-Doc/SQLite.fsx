@@ -9,6 +9,7 @@ open System.Collections.Generic
 open System.Globalization
 open FParsec
 open FParsec.Pipes
+open FParsec.Pipes.Precedence
 
 (**
 
@@ -261,3 +262,106 @@ let literal =
         currentTimestampLiteral
     ]
 
+type BinaryOperator =
+    | Concatenate
+    | Multiply
+    | Divide
+    | Modulo
+    | Add
+    | Subtract
+    | BitShiftLeft
+    | BitShiftRight
+    | BitAnd
+    | BitOr
+    | LessThan
+    | LessThanOrEqual
+    | GreaterThan
+    | GreaterThanOrEqual
+    | Equal
+    | NotEqual
+    | Is
+    | IsNot
+    | In
+    | NotIn
+    | Like
+    | Glob
+    | Match
+    | Regexp
+    | And
+    | Or
+
+type UnaryOperator =
+    | Negative
+    | Not
+    | BitNot
+
+type Expr =
+    | LiteralExpr of Literal
+    | BinaryExpr of BinaryOperator * Expr * Expr
+    | UnaryExpr of UnaryOperator * Expr
+    | BetweenExpr of Expr * Expr * Expr
+
+let private binary op e1 e2 = BinaryExpr (op, e1, e2)
+let private unary op e1 = UnaryExpr (op, e1)
+
+let expr : Parser<Expr, unit> =
+    {
+        Whitespace = ws
+        Term = fun expr ->
+            let parenthesized =
+                %% '(' -- ws -- +. expr -- ')' -%> auto
+            (literal |>> LiteralExpr)
+            <|> parenthesized
+        Operators =
+            [
+                [
+                    prefix (ci "NOT") <| unary Not
+                    prefix '~' <| unary BitNot
+                    prefix '-' <| unary Negative
+                    prefix '+' id
+                ]
+                [
+                    infixl "||" <| binary Concatenate
+                ]
+                [
+                    infixl "*" <| binary Multiply
+                    infixl "/" <| binary Divide
+                    infixl "%" <| binary Modulo
+                ]
+                [
+                    infixl "+" <| binary Add
+                    infixl "-" <| binary Subtract
+                ]
+                [
+                    infixl "<<" <| binary BitShiftLeft
+                    infixl ">>" <| binary BitShiftRight
+                    infixl "&" <| binary BitAnd
+                    infixl "|" <| binary BitOr
+                ]
+                [
+                    infixl ">=" <| binary GreaterThanOrEqual
+                    infixl "<=" <| binary LessThanOrEqual
+                    infixl "<" <| binary LessThan
+                    infixl ">" <| binary GreaterThan
+                ]
+                [
+                    infixl "==" <| binary Equal
+                    infixl "=" <| binary Equal
+                    infixl "!=" <| binary NotEqual
+                    infixl "<>" <| binary NotEqual
+                    infixl (%% ci "IS" -- ws -- ci "NOT" -%> auto |> attempt) <| binary IsNot
+                    infixl (ci "IS") <| binary Is
+                    infixl (%% ci "NOT" -- ws -- ci "IN" -%> auto |> attempt) <| binary NotIn
+                    infixl (ci "IN") <| binary In
+                    infixl (ci "LIKE") <| binary Like
+                    infixl (ci "GLOB") <| binary Glob
+                    infixl (ci "MATCH") <| binary Match
+                    infixl (ci "REGEXP") <| binary Regexp
+                    ternaryl (ci "BETWEEN") (ci "AND") <| fun input low high -> BetweenExpr (input, low, high)
+                ]
+                [
+                    infixl (ci "AND") <| binary And
+                    infixl (ci "OR") <| binary Or
+                ]
+            ]
+    } |> Precedence.expression
