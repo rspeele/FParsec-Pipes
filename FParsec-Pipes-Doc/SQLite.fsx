@@ -334,7 +334,7 @@ let expr : Parser<Expr, unit> =
                 ]
                 [
                     infixl "<<" <| binary BitShiftLeft
-                    infixl ">>" <| binary BitShiftRight
+                    infixl ">>" <| binary BitShiftRighthttp://news.ycombinator.com/
                     infixl "&" <| binary BitAnd
                     infixl "|" <| binary BitOr
                 ]
