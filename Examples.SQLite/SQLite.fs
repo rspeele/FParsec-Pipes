@@ -290,6 +290,14 @@ let private unary op e1 = UnaryExpr (op, e1)
 let private expr, exprImpl = createParserForwardedToRef<Expr, unit>()
 let private selectStmt, selectStmtImpl = createParserForwardedToRef<SelectStmt, unit>()
 
+let tableInvocation =
+    let args =
+        %% '(' -- ws -- +.(qty.[0..] / ',' * expr) -- ')' -%> auto
+    %% +.tableName
+    -- ws
+    -- +.(args * zeroOrOne)
+    -%> fun name args -> { Table = name; Arguments = args }
+
 let isOperator =
     %% ci "IS"
     -- +.((%% ws1 -- ci "NOT" -%> ()) * zeroOrOne)
@@ -301,14 +309,19 @@ let inOperator =
     %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
     -- ci "IN"
     ?- ws
-    -- '('
-    -- ws
     --
         +.[
-            %% +.selectStmt -%> InSelect
-            %% +.(qty.[0..] / ',' * expr) -%> InExpressions
+            %% '('
+            -- ws
+            --
+                +.[
+                    %% +.selectStmt -%> InSelect
+                    %% +.(qty.[0..] / ',' * expr) -%> InExpressions
+                ]
+            -- ')'
+            -%> id
+            %% +.tableInvocation -%> InTable
         ]
-    -- ')'
     -%> function
     | Some () -> fun inSet left -> NotInExpr (left, inSet)
     | None -> fun inSet left -> InExpr (left, inSet)

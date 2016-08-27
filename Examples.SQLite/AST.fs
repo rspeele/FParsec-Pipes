@@ -73,6 +73,12 @@ type Expr =
     | NotBetweenExpr of Expr * Expr * Expr
     | InExpr of Expr * InSet
     | NotInExpr of Expr * InSet
+ 
+and TableInvocation =
+    {
+        Table : TableName
+        Arguments : Expr ResizeArray option // we use an option to distinguish between schema.table and schema.table()
+    }
 
 and FunctionInvocationExpr =
     {
@@ -89,6 +95,7 @@ and FunctionArguments =
 and InSet =
     | InExpressions of Expr ResizeArray
     | InSelect of SelectStmt
+    | InTable of TableInvocation
 
 and SelectStmt =
     | SelectStmt
