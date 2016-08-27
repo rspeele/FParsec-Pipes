@@ -14,6 +14,22 @@ type Literal =
     | FloatLiteral of float
 
 type Name = string
+
+type TableName =
+    {
+        SchemaName : string option
+        TableName : string
+    }
+
+type ColumnName =
+    {
+        Table : TableName option
+        ColumnName : string
+    }
+
+type BindParameter =
+    | NamedParameter of char * string // char is the prefix: ':', '@', or '$'
+    | PositionalParameter of uint32 option
     
 type BinaryOperator =
     | Concatenate
@@ -48,7 +64,8 @@ type UnaryOperator =
 
 type Expr =
     | LiteralExpr of Literal
-    | BindParameterExpr of Name
+    | BindParameterExpr of BindParameter
+    | ColumnNameExpr of ColumnName
     | FunctionInvocationExpr of FunctionInvocationExpr
     | BinaryExpr of BinaryOperator * Expr * Expr
     | UnaryExpr of UnaryOperator * Expr
@@ -60,13 +77,14 @@ type Expr =
 and FunctionInvocationExpr =
     {
         FunctionName : Name
-        Distinct : bool
         Arguments : FunctionArguments
     }
 
+and Distinct = | Distinct
+
 and FunctionArguments =
     | ArgumentWildcard
-    | ArgumentList of Expr ResizeArray
+    | ArgumentList of (Distinct option * Expr ResizeArray)
 
 and InSet =
     | InExpressions of Expr ResizeArray

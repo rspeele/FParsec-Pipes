@@ -239,6 +239,51 @@ let literal =
         currentTimestampLiteral
     ]
 
+let tableName =
+    qty.[1..2] / '.' * (name .>> ws)
+    |>> fun names ->
+        if names.Count = 1 then { SchemaName = None; TableName = names.[0] }
+        elif names.Count = 2 then { SchemaName = Some names.[0]; TableName = names.[1] }
+        else failwith "Unreachable"
+
+let columnName =
+    qty.[1..3] / '.' * (name .>> ws)
+    |>> fun names ->
+        match names.Count with
+        | 1 -> { Table = None; ColumnName = names.[0] }
+        | 2 -> { Table = Some { SchemaName = None; TableName = names.[0] }; ColumnName = names.[1] }
+        | 3 -> { Table = Some { SchemaName = Some names.[0]; TableName = names.[1] }; ColumnName = names.[2] }
+        | _ -> failwith "Unreachable"
+
+let namedBindParameter =
+    %% +.['@'; ':'; '$']
+    -- +.name
+    -%> fun prefix name -> NamedParameter (prefix, name)
+
+let positionalBindParameter =
+    %% '?'
+    -- +.(p<uint32> * zeroOrOne)
+    -%> PositionalParameter
+
+let bindParameter = %[ namedBindParameter; positionalBindParameter ]
+
+let functionArguments (expr : Parser<Expr, unit>) =
+    %[
+        %% '*' -- ws -%> ArgumentWildcard
+        %% +.((%% ci "DISTINCT" -- ws -%> Distinct) * zeroOrOne)
+        -- +.(qty.[0..] / ',' * expr)
+        -%> fun distinct args -> ArgumentList (distinct, args)
+    ]
+
+let functionInvocation expr =
+    %% +.name
+    -- ws
+    -? '('
+    -- ws
+    -- +.functionArguments expr
+    -- ')'
+    -%> fun name args -> { FunctionName = name; Arguments = args }
+
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
 
@@ -265,12 +310,12 @@ let inOperator =
         ]
     -- ')'
     -%> function
-    | Some () -> fun right left -> NotInExpr (left, right)
-    | None -> fun right left -> InExpr (left, right)
+    | Some () -> fun inSet left -> NotInExpr (left, inSet)
+    | None -> fun inSet left -> InExpr (left, inSet)
 
 let notNullOperator =
     %% ci "NOT"
-    -- ws
+    -- ws // compound "NOTNULL" is allowed too, so this is optional whitespace
     -? ci "NULL"
     -%> fun left -> BinaryExpr(IsNot, left, LiteralExpr NullLiteral)
 
@@ -285,8 +330,9 @@ let term expr =
     %[
         %% '(' -- ws -- +. expr -- ')' -%> auto
         %% +.literal -%> LiteralExpr
-        %% +.name -%> BindParameterExpr // TODO actual parameter names, column names
-        // TODO function invocations
+        %% +.bindParameter -%> BindParameterExpr
+        %% +.columnName -%> ColumnNameExpr
+        %% +.functionInvocation expr -%> FunctionInvocationExpr
     ]
 
 let private operators = [
