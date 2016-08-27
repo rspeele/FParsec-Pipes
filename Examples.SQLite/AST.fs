@@ -98,6 +98,7 @@ type Expr =
     | NotInExpr of Expr * InSet
     | ExistsExpr of Expr * SelectStmt
     | NotExistsExpr of Expr * SelectStmt
+    | CaseExpr of CaseExpr
 
 and CastExpr =
     {
@@ -115,6 +116,13 @@ and FunctionInvocationExpr =
     {
         FunctionName : Name
         Arguments : FunctionArguments
+    }
+
+and CaseExpr =
+    {
+        Input : Expr option
+        Cases : (Expr * Expr) ResizeArray
+        Else : Expr option
     }
 
 and Distinct = | Distinct

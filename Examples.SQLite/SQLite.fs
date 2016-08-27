@@ -114,16 +114,18 @@ let sqlKeywords =
         // Since SQL is case-insensitive, be sure to ignore case
         // in this hash set.
 
+let isInitialIdentifierCharacter c =
+    c = '_'
+    || c = '$'
+    || c >= 'a' && c <= 'z'
+    || c >= 'A' && c <= 'Z'
+let isFollowingIdentifierCharacter c =
+    isInitialIdentifierCharacter c || c >= '0' && c <= '9'
+
 /// A plain, unquoted name
 let unquotedName =
-    let isInitial c =
-        c = '_'
-        || c >= 'a' && c <= 'z'
-        || c >= 'A' && c <= 'Z'
-    let isFollowing c =
-        isInitial c || c >= '0' && c <= '9'
     let identifier =
-        many1Satisfy2 isInitial isFollowing
+        many1Satisfy2 isInitialIdentifierCharacter isFollowingIdentifierCharacter
     identifier >>= fun ident ->
         if sqlKeywords.Contains(ident) then
             fail (sprintf "Reserved keyword %s used as name" ident)
@@ -146,21 +148,32 @@ let name =
 
 (**
 
+When we look for a keyword, we need to ensure that we don't actually read part of another name.
+For example, if we're looking for CAST, we shouldn't match after reading the first four characters of
+CASTLE. Therefore, we require that keywords are not followed by other legal identifier characters.
+
+*)
+
+let kw str =
+    %% ci str -? notFollowedByL (satisfy isFollowingIdentifierCharacter) str -%> ()
+
+(**
+
 The simplest literals are those with only one representation.
 
 *)
 
 let nullLiteral =
-    %% ci "NULL" -%> NullLiteral
+    %% kw "NULL" -%> NullLiteral
 
 let currentTimeLiteral =
-    %% ci "CURRENT_TIME" -%> CurrentTimeLiteral
+    %% kw "CURRENT_TIME" -%> CurrentTimeLiteral
 
 let currentDateLiteral =
-    %% ci "CURRENT_DATE" -%> CurrentDateLiteral
+    %% kw "CURRENT_DATE" -%> CurrentDateLiteral
 
 let currentTimestampLiteral =
-    %% ci "CURRENT_TIMESTAMP" -%> CurrentTimestampLiteral
+    %% kw "CURRENT_TIMESTAMP" -%> CurrentTimestampLiteral
 
 (**
 
@@ -299,7 +312,7 @@ let bindParameter = %[ namedBindParameter; positionalBindParameter ]
 let functionArguments (expr : Parser<Expr, unit>) =
     %[
         %% '*' -- ws -%> ArgumentWildcard
-        %% +.((%% ci "DISTINCT" -- ws -%> Distinct) * zeroOrOne)
+        %% +.((%% kw "DISTINCT" -- ws -%> Distinct) * zeroOrOne)
         -- +.(qty.[0..] / ',' * expr)
         -%> fun distinct args -> ArgumentList (distinct, args)
     ]
@@ -314,7 +327,7 @@ let functionInvocation expr =
     -%> fun name args -> { FunctionName = name; Arguments = args }
 
 let cast expr =
-    %% ci "CAST"
+    %% kw "CAST"
     -- ws
     -- '('
     -- ws
@@ -325,6 +338,29 @@ let cast expr =
     -- ws
     -- ')'
     -%> fun ex typeName -> { Expression = ex; AsType = typeName }
+
+let case expr =
+    let whenClause =
+        %% kw "WHEN"
+        -- ws
+        -- +.expr
+        -- kw "THEN"
+        -- ws
+        -- +.expr
+        -%> auto
+    let elseClause =
+        %% kw "ELSE"
+        -- ws
+        -- +.expr
+        -%> id
+    %% kw "CASE"
+    -- ws
+    -- +.(expr * zeroOrOne)
+    -- +.(whenClause * qty.[1..])
+    -- +.(elseClause * zeroOrOne)
+    -- kw "END"
+    -%> fun input cases els ->
+        { Input = input; Cases = cases; Else = els }
 
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
@@ -341,21 +377,21 @@ let tableInvocation =
     -%> fun name args -> { Table = name; Arguments = args }
 
 let collateOperator =
-    %% ci "COLLATE"
+    %% kw "COLLATE"
     -- ws1
     -- +.name
     -%> fun collation expr -> CollateExpr (expr, collation)
 
 let isOperator =
-    %% ci "IS"
-    -- +.((%% ws1 -- ci "NOT" -%> ()) * zeroOrOne)
+    %% kw "IS"
+    -- +.((%% ws1 -- kw "NOT" -%> ()) * zeroOrOne)
     -%> function
     | Some () -> binary IsNot
     | None -> binary Is
 
 let inOperator =
-    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
-    -- ci "IN"
+    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -- kw "IN"
     ?- ws
     --
         +.[
@@ -375,34 +411,34 @@ let inOperator =
     | None -> fun inSet left -> InExpr (left, inSet)
 
 let nottyInfixOperator =
-    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
+    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
     -? +.
         [
-            %% ci "LIKE" -%> binary Like
-            %% ci "GLOB" -%> binary Glob
-            %% ci "MATCH" -%> binary Match
-            %% ci "REGEXP" -%> binary Regexp
+            %% kw "LIKE" -%> binary Like
+            %% kw "GLOB" -%> binary Glob
+            %% kw "MATCH" -%> binary Match
+            %% kw "REGEXP" -%> binary Regexp
         ]
     -%> function
     | Some () -> fun maker left right -> UnaryExpr (Not, maker left right )
     | None -> fun maker left right -> maker left right
 
 let notNullOperator =
-    %% ci "NOT"
+    %% kw "NOT"
     -- ws // compound "NOTNULL" is allowed too, so this is optional whitespace
-    -? ci "NULL"
+    -? kw "NULL"
     -%> fun left -> BinaryExpr(IsNot, left, LiteralExpr NullLiteral)
 
 let betweenOperator =
-    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
-    -? ci "BETWEEN"
+    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -? kw "BETWEEN"
     -%> function
     | Some () -> fun input low high -> NotBetweenExpr (input, low, high)
     | None -> fun input low high -> BetweenExpr (input, low, high)
 
 let existsOperator =
-    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
-    -? ci "EXISTS"
+    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -? kw "EXISTS"
     -- ws
     -- '('
     -- ws
@@ -419,6 +455,7 @@ let term expr =
         %% +.bindParameter -%> BindParameterExpr
         %% +.columnName -%> ColumnNameExpr
         %% +.cast expr -%> CastExpr
+        %% +.case expr -%> CaseExpr
         %% +.functionInvocation expr -%> FunctionInvocationExpr
     ]
 
@@ -427,7 +464,7 @@ let private operators = [
         postfixc collateOperator
     ]
     [
-        prefix (ci "NOT") <| unary Not
+        prefix (kw "NOT") <| unary Not
         prefix '~' <| unary BitNot
         prefix '-' <| unary Negative
         prefix '+' id
@@ -463,17 +500,16 @@ let private operators = [
         infixl "<>" <| binary NotEqual
         infixlc isOperator
         infixlc nottyInfixOperator
-        postfix (ci "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
+        postfix (kw "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
         postfixc notNullOperator
         postfixc inOperator
         postfixc existsOperator
-        ternarylc betweenOperator (%% ci "AND" -%> ())
+        ternarylc betweenOperator (%% kw "AND" -%> ())
     ]
     [
-        infixl (ci "AND") <| binary And
-        infixl (ci "OR") <| binary Or
+        infixl (kw "AND") <| binary And
+        infixl (kw "OR") <| binary Or
     ]
-    // TODO: case, exists
 ]
 do
     exprImpl :=
