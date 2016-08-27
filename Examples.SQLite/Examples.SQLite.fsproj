@@ -51,6 +51,7 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="AST.fs" />
     <Compile Include="SQLite.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
