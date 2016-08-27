@@ -28,6 +28,7 @@ type Fixity<'e, 'u> =
     | Postfix of Parser<'e -> 'e, 'u>
     | Infix of Associativity * Parser<'e -> 'e -> 'e, 'u>
     | Ternary of Associativity * Parser<'e -> 'e -> 'e -> 'e, 'u> * Parser<unit, 'u>
+    | TernaryOptional of Associativity * Parser<'e -> 'e -> 'e option -> 'e, 'u> * Parser<unit, 'u>
 
 let infixrc parser = Infix (RightAssociative, parser)
 let inline infixr parser make = infixrc (%parser >>% make)
@@ -57,6 +58,20 @@ let inline ternaryr left right make =
 let inline ternaryrt left right make =
     ternaryr left right (fun x y z -> make (x, y, z))
 
+let ternaryolc left right =
+    TernaryOptional (LeftAssociative, left, right)
+let inline ternaryol left right make =
+    ternaryolc (%left >>% make) (%right |>> ignore)
+let inline ternaryolt left right make =
+    ternaryol left right (fun x y z -> make (x, y, z))
+
+let ternaryorc left right =
+    TernaryOptional (RightAssociative, left, right)
+let inline ternaryor left right make =
+    ternaryorc (%left >>% make) (%right |>> ignore)
+let inline ternaryort left right make =
+    ternaryor left right (fun x y z -> make (x, y, z))
+
 type OperatorTable<'e, 'u> =
     {
         /// Function which, given the overall expression parser,
@@ -84,10 +99,19 @@ type private TernaryTrailing<'e, 'u> =
         Make : 'e -> 'e -> 'e -> 'e
     }
 
+type private TernaryOptionalTrailing<'e, 'u> =
+    {
+        MinInnerPrecedence : int
+        RightOperator : Parser<unit, 'u>
+        MinRightPrecedence : int
+        MakeOptional : 'e -> 'e -> 'e option -> 'e
+    }
+
 type private FastTrailingOperator<'e, 'u> =
     | PostfixTrailing of ('e -> 'e)
     | InfixTrailing of int * ('e -> 'e -> 'e)
     | TernaryTrailing of TernaryTrailing<'e, 'u>
+    | TernaryOptionalTrailing of TernaryOptionalTrailing<'e, 'u>
 
 type private FastOperatorTable<'e, 'u> =
     {
@@ -103,6 +127,10 @@ type private FastOperatorTable<'e, 'u> =
         PrefixOperator : Parser<'e FastPrefixOperator, 'u>
     }
 
+let private assocNextPrec = function
+    | LeftAssociative -> 1
+    | RightAssociative -> 0
+
 let private fastOperatorTable (table : OperatorTable<_, _>) =
     let ws = table.Whitespace
     let term expr = table.Term expr .>> ws
@@ -114,7 +142,7 @@ let private fastOperatorTable (table : OperatorTable<_, _>) =
                 match fixity with
                 | Prefix parser ->
                     yield %% +.parser -- ws -%> fun make -> { Make = make; Precedence = prec }
-                | Postfix _ | Infix _ | Ternary _  -> ()
+                | Postfix _ | Infix _ | Ternary _ | TernaryOptional _  -> ()
         |]
     let trailingOps = Array.zeroCreate opsByPrecedence.Length
     for prec = trailingOps.Length - 1 downto 0 do
@@ -125,24 +153,26 @@ let private fastOperatorTable (table : OperatorTable<_, _>) =
                 | Postfix parser ->
                     yield %% +.parser -- ws -%> PostfixTrailing
                 | Infix (assoc, parser) ->
-                    let nextPrec =
-                        match assoc with
-                        | LeftAssociative -> prec + 1
-                        | RightAssociative -> prec
+                    let nextPrec = prec + assocNextPrec assoc
                     yield %% +.parser -- ws -%> fun make -> InfixTrailing (nextPrec, make)
                 | Ternary (assoc, left, right) ->
                     let trailing make =
                         {
                             MinInnerPrecedence = prec
                             RightOperator = right .>> ws
-                            MinRightPrecedence =
-                                match assoc with
-                                | LeftAssociative -> prec + 1
-                                | RightAssociative -> prec
+                            MinRightPrecedence = prec + assocNextPrec assoc
                             Make = make
                         } |> TernaryTrailing
                     yield %% +.left -- ws -%> trailing
-                        
+                | TernaryOptional (assoc, left, right) ->
+                    let trailing make =
+                        {
+                            MinInnerPrecedence = prec
+                            RightOperator = right .>> ws
+                            MinRightPrecedence = prec + assocNextPrec assoc
+                            MakeOptional = make
+                        } |> TernaryOptionalTrailing
+                    yield %% +.left -- ws -%> trailing
             |]
         let afterHigher =
             if prec + 1 >= trailingOps.Length then id else (<|>) trailingOps.[prec + 1]
@@ -180,6 +210,10 @@ let private fastOperatorParser (table : FastOperatorTable<'e, 'u>) =
                     -- ternary.RightOperator
                     -- +.exprParts.[ternary.MinRightPrecedence]
                     -%> fun inner right left -> ternary.Make left inner right
+                | TernaryOptionalTrailing ternary ->
+                    %% +.exprParts.[ternary.MinInnerPrecedence]
+                    -- +.((ternary.RightOperator >>. exprParts.[ternary.MinRightPrecedence]) * zeroOrOne)
+                    -%> fun inner right left -> ternary.MakeOptional left inner right
             trailingParts.[i] <-
                 table.TrailingOperators.[i] >>= nextPart
             exprParts.[i] <-

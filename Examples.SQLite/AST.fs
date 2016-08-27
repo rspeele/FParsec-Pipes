@@ -71,10 +71,6 @@ type BinaryOperator =
     | NotEqual
     | Is
     | IsNot
-    | Like
-    | Glob
-    | Match
-    | Regexp
     | And
     | Or
 
@@ -83,6 +79,12 @@ type UnaryOperator =
     | Not
     | BitNot
 
+type SimilarityOperator =
+    | Like
+    | Glob
+    | Match
+    | Regexp
+
 type Expr =
     | LiteralExpr of Literal
     | BindParameterExpr of BindParameter
@@ -90,6 +92,7 @@ type Expr =
     | CastExpr of CastExpr
     | CollateExpr of Expr * Name
     | FunctionInvocationExpr of FunctionInvocationExpr
+    | SimilarityExpr of SimilarityOperator * Expr * Expr * Expr option // optional ESCAPE clause
     | BinaryExpr of BinaryOperator * Expr * Expr
     | UnaryExpr of UnaryOperator * Expr
     | BetweenExpr of Expr * Expr * Expr

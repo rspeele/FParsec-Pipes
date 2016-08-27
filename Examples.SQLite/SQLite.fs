@@ -410,18 +410,18 @@ let inOperator =
     | Some () -> fun inSet left -> NotInExpr (left, inSet)
     | None -> fun inSet left -> InExpr (left, inSet)
 
-let nottyInfixOperator =
+let similarityOperator =
     %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
     -? +.
         [
-            %% kw "LIKE" -%> binary Like
-            %% kw "GLOB" -%> binary Glob
-            %% kw "MATCH" -%> binary Match
-            %% kw "REGEXP" -%> binary Regexp
+            %% kw "LIKE" -%> Like
+            %% kw "GLOB" -%> Glob
+            %% kw "MATCH" -%> Match
+            %% kw "REGEXP" -%> Regexp
         ]
     -%> function
-    | Some () -> fun maker left right -> UnaryExpr (Not, maker left right )
-    | None -> fun maker left right -> maker left right
+    | Some () -> fun op left right escape -> UnaryExpr (Not, SimilarityExpr (op, left, right, escape))
+    | None -> fun op left right escape -> SimilarityExpr (op, left, right, escape)
 
 let notNullOperator =
     %% kw "NOT"
@@ -499,12 +499,12 @@ let private operators = [
         infixl "!=" <| binary NotEqual
         infixl "<>" <| binary NotEqual
         infixlc isOperator
-        infixlc nottyInfixOperator
+        ternaryolc similarityOperator (kw "ESCAPE")
         postfix (kw "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
         postfixc notNullOperator
         postfixc inOperator
         postfixc existsOperator
-        ternarylc betweenOperator (%% kw "AND" -%> ())
+        ternarylc betweenOperator (kw "AND")
     ]
     [
         infixl (kw "AND") <| binary And
