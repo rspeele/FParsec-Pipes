@@ -374,6 +374,19 @@ let inOperator =
     | Some () -> fun inSet left -> NotInExpr (left, inSet)
     | None -> fun inSet left -> InExpr (left, inSet)
 
+let nottyInfixOperator =
+    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -? +.
+        [
+            %% ci "LIKE" -%> binary Like
+            %% ci "GLOB" -%> binary Glob
+            %% ci "MATCH" -%> binary Match
+            %% ci "REGEXP" -%> binary Regexp
+        ]
+    -%> function
+    | Some () -> fun maker left right -> UnaryExpr (Not, maker left right )
+    | None -> fun maker left right -> maker left right
+
 let notNullOperator =
     %% ci "NOT"
     -- ws // compound "NOTNULL" is allowed too, so this is optional whitespace
@@ -440,16 +453,14 @@ let private operators = [
         postfix (ci "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
         postfixc notNullOperator
         postfixc inOperator
-        infixl (ci "LIKE") <| binary Like
-        infixl (ci "GLOB") <| binary Glob
-        infixl (ci "MATCH") <| binary Match
-        infixl (ci "REGEXP") <| binary Regexp
+        infixlc nottyInfixOperator
         ternarylc betweenOperator (%% ci "AND" -%> ())
     ]
     [
         infixl (ci "AND") <| binary And
         infixl (ci "OR") <| binary Or
     ]
+    // TODO: case, exists
 ]
 do
     exprImpl :=
