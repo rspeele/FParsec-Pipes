@@ -88,6 +88,7 @@ type Expr =
     | BindParameterExpr of BindParameter
     | ColumnNameExpr of ColumnName
     | CastExpr of CastExpr
+    | CollateExpr of Expr * Name
     | FunctionInvocationExpr of FunctionInvocationExpr
     | BinaryExpr of BinaryOperator * Expr * Expr
     | UnaryExpr of UnaryOperator * Expr

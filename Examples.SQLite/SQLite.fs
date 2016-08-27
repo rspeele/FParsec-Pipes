@@ -340,6 +340,12 @@ let tableInvocation =
     -- +.(args * zeroOrOne)
     -%> fun name args -> { Table = name; Arguments = args }
 
+let collateOperator =
+    %% ci "COLLATE"
+    -- ws1
+    -- +.name
+    -%> fun collation expr -> CollateExpr (expr, collation)
+
 let isOperator =
     %% ci "IS"
     -- +.((%% ws1 -- ci "NOT" -%> ()) * zeroOrOne)
@@ -392,6 +398,9 @@ let term expr =
     ]
 
 let private operators = [
+    [
+        postfixc collateOperator
+    ]
     [
         prefix (ci "NOT") <| unary Not
         prefix '~' <| unary BitNot
