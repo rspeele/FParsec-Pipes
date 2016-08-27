@@ -400,6 +400,18 @@ let betweenOperator =
     | Some () -> fun input low high -> NotBetweenExpr (input, low, high)
     | None -> fun input low high -> BetweenExpr (input, low, high)
 
+let existsOperator =
+    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -? ci "EXISTS"
+    -- ws
+    -- '('
+    -- ws
+    -- +.selectStmt
+    -- ')'
+    -%> function
+    | Some () -> fun select input -> NotExistsExpr (input, select)
+    | None -> fun select input -> ExistsExpr (input, select)
+
 let term expr =
     %[
         %% '(' -- ws -- +. expr -- ')' -%> auto
@@ -424,25 +436,25 @@ let private operators = [
         infixl "||" <| binary Concatenate
     ]
     [
-        infixl "*" <| binary Multiply
-        infixl "/" <| binary Divide
-        infixl "%" <| binary Modulo
+        infixl '*' <| binary Multiply
+        infixl '/' <| binary Divide
+        infixl '%' <| binary Modulo
     ]
     [
-        infixl "+" <| binary Add
-        infixl "-" <| binary Subtract
+        infixl '+' <| binary Add
+        infixl '-' <| binary Subtract
     ]
     [
         infixl "<<" <| binary BitShiftLeft
         infixl ">>" <| binary BitShiftRight
-        infixl "&" <| binary BitAnd
-        infixl "|" <| binary BitOr
+        infixl '&' <| binary BitAnd
+        infixl '|' <| binary BitOr
     ]
     [
         infixl ">=" <| binary GreaterThanOrEqual
         infixl "<=" <| binary LessThanOrEqual
-        infixl "<" <| binary LessThan
-        infixl ">" <| binary GreaterThan
+        infixl (%'<' >>. notFollowedBy (skipChar '>')) <| binary LessThan
+        infixl '>' <| binary GreaterThan
     ]
     [
         infixl "==" <| binary Equal
@@ -450,10 +462,11 @@ let private operators = [
         infixl "!=" <| binary NotEqual
         infixl "<>" <| binary NotEqual
         infixlc isOperator
+        infixlc nottyInfixOperator
         postfix (ci "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
         postfixc notNullOperator
         postfixc inOperator
-        infixlc nottyInfixOperator
+        postfixc existsOperator
         ternarylc betweenOperator (%% ci "AND" -%> ())
     ]
     [

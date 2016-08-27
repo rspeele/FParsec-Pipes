@@ -96,6 +96,8 @@ type Expr =
     | NotBetweenExpr of Expr * Expr * Expr
     | InExpr of Expr * InSet
     | NotInExpr of Expr * InSet
+    | ExistsExpr of Expr * SelectStmt
+    | NotExistsExpr of Expr * SelectStmt
 
 and CastExpr =
     {
