@@ -136,6 +136,8 @@ A name may appear in any of the given forms.
 
 *)
 
+type Name = string
+
 let name =
     %[
         quotedName
@@ -288,19 +290,31 @@ type UnaryOperator =
     | Not
     | BitNot
 
-type InSet =
-    | InExpressions of Expr ResizeArray
-    | InSelect of SelectStmt
-
-and Expr =
+type Expr =
     | LiteralExpr of Literal
-    | NameExpr of string
+    | BindParameterExpr of Name
+    | FunctionInvocationExpr of FunctionInvocationExpr
     | BinaryExpr of BinaryOperator * Expr * Expr
     | UnaryExpr of UnaryOperator * Expr
     | BetweenExpr of Expr * Expr * Expr
     | NotBetweenExpr of Expr * Expr * Expr
     | InExpr of Expr * InSet
     | NotInExpr of Expr * InSet
+
+and FunctionInvocationExpr =
+    {
+        FunctionName : Name
+        Distinct : bool
+        Arguments : FunctionArguments
+    }
+
+and FunctionArguments =
+    | ArgumentWildcard
+    | ArgumentList of Expr ResizeArray
+
+and InSet =
+    | InExpressions of Expr ResizeArray
+    | InSelect of SelectStmt
 
 and SelectStmt =
     | SelectStmt
@@ -345,62 +359,63 @@ let term expr =
     %[
         %% '(' -- ws -- +. expr -- ')' -%> auto
         %% +.literal -%> LiteralExpr
-        %% +.name -%> NameExpr
+        %% +.name -%> BindParameterExpr // TODO actual parameter names, column names
+        // TODO function invocations
     ]
 
+let private operators = [
+    [
+        prefix (ci "NOT") <| unary Not
+        prefix '~' <| unary BitNot
+        prefix '-' <| unary Negative
+        prefix '+' id
+    ]
+    [
+        infixl "||" <| binary Concatenate
+    ]
+    [
+        infixl "*" <| binary Multiply
+        infixl "/" <| binary Divide
+        infixl "%" <| binary Modulo
+    ]
+    [
+        infixl "+" <| binary Add
+        infixl "-" <| binary Subtract
+    ]
+    [
+        infixl "<<" <| binary BitShiftLeft
+        infixl ">>" <| binary BitShiftRight
+        infixl "&" <| binary BitAnd
+        infixl "|" <| binary BitOr
+    ]
+    [
+        infixl ">=" <| binary GreaterThanOrEqual
+        infixl "<=" <| binary LessThanOrEqual
+        infixl "<" <| binary LessThan
+        infixl ">" <| binary GreaterThan
+    ]
+    [
+        infixl "==" <| binary Equal
+        infixl "=" <| binary Equal
+        infixl "!=" <| binary NotEqual
+        infixl "<>" <| binary NotEqual
+        infixlc isOperator
+        postfixc inOperator
+        infixl (ci "LIKE") <| binary Like
+        infixl (ci "GLOB") <| binary Glob
+        infixl (ci "MATCH") <| binary Match
+        infixl (ci "REGEXP") <| binary Regexp
+        ternarylc betweenOperator (%% ci "AND" -%> ())
+    ]
+    [
+        infixl (ci "AND") <| binary And
+        infixl (ci "OR") <| binary Or
+    ]
+]
 do
     exprImpl :=
         {
             Whitespace = ws
             Term = term
-            Operators =
-                [
-                    [
-                        prefix (ci "NOT") <| unary Not
-                        prefix '~' <| unary BitNot
-                        prefix '-' <| unary Negative
-                        prefix '+' id
-                    ]
-                    [
-                        infixl "||" <| binary Concatenate
-                    ]
-                    [
-                        infixl "*" <| binary Multiply
-                        infixl "/" <| binary Divide
-                        infixl "%" <| binary Modulo
-                    ]
-                    [
-                        infixl "+" <| binary Add
-                        infixl "-" <| binary Subtract
-                    ]
-                    [
-                        infixl "<<" <| binary BitShiftLeft
-                        infixl ">>" <| binary BitShiftRight
-                        infixl "&" <| binary BitAnd
-                        infixl "|" <| binary BitOr
-                    ]
-                    [
-                        infixl ">=" <| binary GreaterThanOrEqual
-                        infixl "<=" <| binary LessThanOrEqual
-                        infixl "<" <| binary LessThan
-                        infixl ">" <| binary GreaterThan
-                    ]
-                    [
-                        infixl "==" <| binary Equal
-                        infixl "=" <| binary Equal
-                        infixl "!=" <| binary NotEqual
-                        infixl "<>" <| binary NotEqual
-                        infixlc isOperator
-                        postfixc inOperator
-                        infixl (ci "LIKE") <| binary Like
-                        infixl (ci "GLOB") <| binary Glob
-                        infixl (ci "MATCH") <| binary Match
-                        infixl (ci "REGEXP") <| binary Regexp
-                        ternarylc betweenOperator (%% ci "AND" -%> ())
-                    ]
-                    [
-                        infixl (ci "AND") <| binary And
-                        infixl (ci "OR") <| binary Or
-                    ]
-                ]
+            Operators = operators    
         } |> Precedence.expression
