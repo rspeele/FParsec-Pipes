@@ -348,6 +348,12 @@ let inOperator =
     | Some () -> fun right left -> NotInExpr (left, right)
     | None -> fun right left -> InExpr (left, right)
 
+let notNullOperator =
+    %% ci "NOT"
+    -- ws
+    -? ci "NULL"
+    -%> fun left -> BinaryExpr(IsNot, left, LiteralExpr NullLiteral)
+
 let betweenOperator =
     %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
     -? ci "BETWEEN"
@@ -400,6 +406,8 @@ let private operators = [
         infixl "!=" <| binary NotEqual
         infixl "<>" <| binary NotEqual
         infixlc isOperator
+        postfix (ci "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
+        postfixc notNullOperator
         postfixc inOperator
         infixl (ci "LIKE") <| binary Like
         infixl (ci "GLOB") <| binary Glob
