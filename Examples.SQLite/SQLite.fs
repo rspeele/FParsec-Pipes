@@ -332,7 +332,7 @@ let cast expr =
     -- '('
     -- ws
     -- +.expr
-    -- ci "AS"
+    -- kw "AS"
     -- ws
     -- +. typeName
     -- ws
