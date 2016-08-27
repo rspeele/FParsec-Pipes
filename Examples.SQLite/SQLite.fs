@@ -1,9 +1,4 @@
-﻿(*** hide ***)
-
-#r @"bin/debug/FParsecCS.dll"
-#r @"bin/debug/FParsec.dll"
-#r @"bin/debug/FParsec-Pipes.dll"
-#nowarn "193"
+﻿module Examples.SQLite.SQLiteParser
 open System
 open System.Collections.Generic
 open System.Globalization
@@ -281,8 +276,6 @@ type BinaryOperator =
     | NotEqual
     | Is
     | IsNot
-    | In
-    | NotIn
     | Like
     | Glob
     | Match
@@ -295,73 +288,119 @@ type UnaryOperator =
     | Not
     | BitNot
 
-type Expr =
+type InSet =
+    | InExpressions of Expr ResizeArray
+    | InSelect of SelectStmt
+
+and Expr =
     | LiteralExpr of Literal
+    | NameExpr of string
     | BinaryExpr of BinaryOperator * Expr * Expr
     | UnaryExpr of UnaryOperator * Expr
     | BetweenExpr of Expr * Expr * Expr
+    | NotBetweenExpr of Expr * Expr * Expr
+    | InExpr of Expr * InSet
+    | NotInExpr of Expr * InSet
+
+and SelectStmt =
+    | SelectStmt
 
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
 
-let expr : Parser<Expr, unit> =
-    {
-        Whitespace = ws
-        Term = fun expr ->
-            let parenthesized =
-                %% '(' -- ws -- +. expr -- ')' -%> auto
-            (literal |>> LiteralExpr)
-            <|> parenthesized
-        Operators =
-            [
+let private expr, exprImpl = createParserForwardedToRef<Expr, unit>()
+let private selectStmt, selectStmtImpl = createParserForwardedToRef<SelectStmt, unit>()
+
+let isOperator =
+    %% ci "IS"
+    -- +.((%% ws1 -- ci "NOT" -%> ()) * zeroOrOne)
+    -%> function
+    | Some () -> binary IsNot
+    | None -> binary Is
+
+let inOperator =
+    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -- ci "IN"
+    ?- ws
+    -- '('
+    -- ws
+    --
+        +.[
+            %% +.selectStmt -%> InSelect
+            %% +.(qty.[0..] / ',' * expr) -%> InExpressions
+        ]
+    -- ')'
+    -%> function
+    | Some () -> fun right left -> NotInExpr (left, right)
+    | None -> fun right left -> InExpr (left, right)
+
+let betweenOperator =
+    %% +.((%% ci "NOT" -- ws1 -%> ()) * zeroOrOne)
+    -? ci "BETWEEN"
+    -%> function
+    | Some () -> fun input low high -> NotBetweenExpr (input, low, high)
+    | None -> fun input low high -> BetweenExpr (input, low, high)
+
+let term expr =
+    %[
+        %% '(' -- ws -- +. expr -- ')' -%> auto
+        %% +.literal -%> LiteralExpr
+        %% +.name -%> NameExpr
+    ]
+
+do
+    exprImpl :=
+        {
+            Whitespace = ws
+            Term = term
+            Operators =
                 [
-                    prefix (ci "NOT") <| unary Not
-                    prefix '~' <| unary BitNot
-                    prefix '-' <| unary Negative
-                    prefix '+' id
+                    [
+                        prefix (ci "NOT") <| unary Not
+                        prefix '~' <| unary BitNot
+                        prefix '-' <| unary Negative
+                        prefix '+' id
+                    ]
+                    [
+                        infixl "||" <| binary Concatenate
+                    ]
+                    [
+                        infixl "*" <| binary Multiply
+                        infixl "/" <| binary Divide
+                        infixl "%" <| binary Modulo
+                    ]
+                    [
+                        infixl "+" <| binary Add
+                        infixl "-" <| binary Subtract
+                    ]
+                    [
+                        infixl "<<" <| binary BitShiftLeft
+                        infixl ">>" <| binary BitShiftRight
+                        infixl "&" <| binary BitAnd
+                        infixl "|" <| binary BitOr
+                    ]
+                    [
+                        infixl ">=" <| binary GreaterThanOrEqual
+                        infixl "<=" <| binary LessThanOrEqual
+                        infixl "<" <| binary LessThan
+                        infixl ">" <| binary GreaterThan
+                    ]
+                    [
+                        infixl "==" <| binary Equal
+                        infixl "=" <| binary Equal
+                        infixl "!=" <| binary NotEqual
+                        infixl "<>" <| binary NotEqual
+                        infixlc isOperator
+                        postfixc inOperator
+                        infixl (ci "LIKE") <| binary Like
+                        infixl (ci "GLOB") <| binary Glob
+                        infixl (ci "MATCH") <| binary Match
+                        infixl (ci "REGEXP") <| binary Regexp
+                        ternarylc betweenOperator (%% ci "AND" -%> ())
+                    ]
+                    [
+                        infixl (ci "AND") <| binary And
+                        infixl (ci "OR") <| binary Or
+                    ]
                 ]
-                [
-                    infixl "||" <| binary Concatenate
-                ]
-                [
-                    infixl "*" <| binary Multiply
-                    infixl "/" <| binary Divide
-                    infixl "%" <| binary Modulo
-                ]
-                [
-                    infixl "+" <| binary Add
-                    infixl "-" <| binary Subtract
-                ]
-                [
-                    infixl "<<" <| binary BitShiftLeft
-                    infixl ">>" <| binary BitShiftRighthttp://news.ycombinator.com/
-                    infixl "&" <| binary BitAnd
-                    infixl "|" <| binary BitOr
-                ]
-                [
-                    infixl ">=" <| binary GreaterThanOrEqual
-                    infixl "<=" <| binary LessThanOrEqual
-                    infixl "<" <| binary LessThan
-                    infixl ">" <| binary GreaterThan
-                ]
-                [
-                    infixl "==" <| binary Equal
-                    infixl "=" <| binary Equal
-                    infixl "!=" <| binary NotEqual
-                    infixl "<>" <| binary NotEqual
-                    infixl (%% ci "IS" -- ws -- ci "NOT" -%> auto |> attempt) <| binary IsNot
-                    infixl (ci "IS") <| binary Is
-                    infixl (%% ci "NOT" -- ws -- ci "IN" -%> auto |> attempt) <| binary NotIn
-                    infixl (ci "IN") <| binary In
-                    infixl (ci "LIKE") <| binary Like
-                    infixl (ci "GLOB") <| binary Glob
-                    infixl (ci "MATCH") <| binary Match
-                    infixl (ci "REGEXP") <| binary Regexp
-                    ternaryl (ci "BETWEEN") (ci "AND") <| fun input low high -> BetweenExpr (input, low, high)
-                ]
-                [
-                    infixl (ci "AND") <| binary And
-                    infixl (ci "OR") <| binary Or
-                ]
-            ]
-    } |> Precedence.expression
+        } |> Precedence.expression

@@ -29,22 +29,33 @@ type Fixity<'e, 'u> =
     | Infix of Associativity * Parser<'e -> 'e -> 'e, 'u>
     | Ternary of Associativity * Parser<'e -> 'e -> 'e -> 'e, 'u> * Parser<unit, 'u>
 
-let inline infixr parser make = Infix (RightAssociative, %parser >>% make)
-let inline infixrt parser make = Infix (RightAssociative, %parser >>% fun x y -> make (x, y))
-let inline infixl parser make = Infix (LeftAssociative, %parser >>% make)
-let inline infixlt parser make = Infix (LeftAssociative, %parser >>% fun x y -> make (x, y))
+let infixrc parser = Infix (RightAssociative, parser)
+let inline infixr parser make = infixrc (%parser >>% make)
+let inline infixrt parser make = infixr parser (fun x y -> make (x, y))
 
-let inline prefix parser make = Prefix (%parser >>% make)
-let inline postfix parser make = Postfix (%parser >>% make)
+let infixlc parser = Infix (LeftAssociative, parser)
+let inline infixl parser make = infixlc (%parser >>% make)
+let inline infixlt parser make = infixl parser (fun x y -> make (x, y))
 
+let prefixc parser = Prefix parser
+let inline prefix parser make = prefixc (%parser >>% make)
+
+let postfixc parser = Postfix parser
+let inline postfix parser make = postfixc (%parser >>% make)
+
+let ternarylc left right =
+    Ternary (LeftAssociative, left, right)
 let inline ternaryl left right make =
-    Ternary (LeftAssociative, %left >>% make, %right |>> ignore)
+    ternarylc (%left >>% make) (%right |>> ignore)
 let inline ternarylt left right make =
-    Ternary (LeftAssociative, (%left >>% fun x y z -> make (x, y, z)), %right |>> ignore)
+    ternaryl left right (fun x y z -> make (x, y, z))
+
+let ternaryrc left right =
+    Ternary (RightAssociative, left, right)
 let inline ternaryr left right make =
-    Ternary (RightAssociative, %left >>% make, %right |>> ignore)
+    ternaryrc (%left >>% make) (%right |>> ignore)
 let inline ternaryrt left right make =
-    Ternary (RightAssociative, (%left >>% fun x y z -> make (x, y, z)), %right |>> ignore)
+    ternaryr left right (fun x y z -> make (x, y, z))
 
 type OperatorTable<'e, 'u> =
     {
