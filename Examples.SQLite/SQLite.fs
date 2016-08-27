@@ -222,6 +222,18 @@ let numericLiteral =
         else 
             lit.String |> float |> FloatLiteral |> preturn
 
+let signedNumericLiteral =
+    let sign =
+        %[
+            %% '+' -%> 1
+            %% '-' -%> -1
+            preturn 0
+        ]
+    %% +.sign
+    -- ws
+    -- +.numericLiteral
+    -%> fun sign value -> { Sign = sign; Value = value }
+
 (**
 
 We then combine the literal definitions into one.
@@ -230,7 +242,7 @@ We then combine the literal definitions into one.
 
 let literal =
     %[
-        numericLiteral
+        %% +.numericLiteral -%> NumericLiteral
         stringLiteral
         blobLiteral
         nullLiteral
@@ -239,12 +251,29 @@ let literal =
         currentTimestampLiteral
     ]
 
+let typeBounds =
+    %% '('
+    -- ws
+    -- +.(qty.[1..2] / ',' * (signedNumericLiteral .>> ws))
+    -- ')'
+    -%> fun bounds ->
+        match bounds.Count with
+        | 1 -> { Low = bounds.[0]; High = None }
+        | 2 -> { Low = bounds.[0]; High = Some bounds.[1] }
+        | _ -> failwith "Unreachable"
+
+let typeName =
+    %% +.(qty.[1..] /. ws * name)
+    -- +.(typeBounds * zeroOrOne)
+    -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds }
+    
 let tableName =
     qty.[1..2] / '.' * (name .>> ws)
     |>> fun names ->
-        if names.Count = 1 then { SchemaName = None; TableName = names.[0] }
-        elif names.Count = 2 then { SchemaName = Some names.[0]; TableName = names.[1] }
-        else failwith "Unreachable"
+        match names.Count with
+        | 1 -> { SchemaName = None; TableName = names.[0] }
+        | 2 -> { SchemaName = Some names.[0]; TableName = names.[1] }
+        | _ -> failwith "Unreachable"
 
 let columnName =
     qty.[1..3] / '.' * (name .>> ws)
@@ -283,6 +312,19 @@ let functionInvocation expr =
     -- +.functionArguments expr
     -- ')'
     -%> fun name args -> { FunctionName = name; Arguments = args }
+
+let cast expr =
+    %% ci "CAST"
+    -- ws
+    -- '('
+    -- ws
+    -- +.expr
+    -- ci "AS"
+    -- ws
+    -- +. typeName
+    -- ws
+    -- ')'
+    -%> fun ex typeName -> { Expression = ex; AsType = typeName }
 
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
@@ -345,6 +387,7 @@ let term expr =
         %% +.literal -%> LiteralExpr
         %% +.bindParameter -%> BindParameterExpr
         %% +.columnName -%> ColumnNameExpr
+        %% +.cast expr -%> CastExpr
         %% +.functionInvocation expr -%> FunctionInvocationExpr
     ]
 

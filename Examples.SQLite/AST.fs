@@ -3,6 +3,16 @@ open System
 open System.Collections.Generic
 open System.Globalization
 
+type NumericLiteral =
+    | IntegerLiteral of int64
+    | FloatLiteral of float
+
+type SignedNumericLiteral =
+    {
+        Sign : int // -1, 0, 1
+        Value : NumericLiteral
+    }
+
 type Literal =
     | NullLiteral
     | CurrentTimeLiteral
@@ -10,21 +20,32 @@ type Literal =
     | CurrentTimestampLiteral
     | StringLiteral of string
     | BlobLiteral of byte array
-    | IntegerLiteral of int64
-    | FloatLiteral of float
+    | NumericLiteral of NumericLiteral
 
 type Name = string
 
+type TypeBounds =
+    {
+        Low : SignedNumericLiteral
+        High : SignedNumericLiteral option
+    }
+
+type TypeName =
+    {
+        TypeName : Name list
+        Bounds : TypeBounds option
+    }
+
 type TableName =
     {
-        SchemaName : string option
-        TableName : string
+        SchemaName : Name option
+        TableName : Name
     }
 
 type ColumnName =
     {
         Table : TableName option
-        ColumnName : string
+        ColumnName : Name
     }
 
 type BindParameter =
@@ -66,6 +87,7 @@ type Expr =
     | LiteralExpr of Literal
     | BindParameterExpr of BindParameter
     | ColumnNameExpr of ColumnName
+    | CastExpr of CastExpr
     | FunctionInvocationExpr of FunctionInvocationExpr
     | BinaryExpr of BinaryOperator * Expr * Expr
     | UnaryExpr of UnaryOperator * Expr
@@ -73,6 +95,12 @@ type Expr =
     | NotBetweenExpr of Expr * Expr * Expr
     | InExpr of Expr * InSet
     | NotInExpr of Expr * InSet
+
+and CastExpr =
+    {
+        Expression : Expr
+        AsType : TypeName
+    }
  
 and TableInvocation =
     {
