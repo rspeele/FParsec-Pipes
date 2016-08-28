@@ -703,7 +703,7 @@ let orderBy =
     -- ws
     -- kw "BY"
     -- ws
-    -- +.(orderingTerm * qty.[1..])
+    -- +.(qty.[1..] / ',' * orderingTerm)
     -%> auto
 
 let limit =
@@ -733,3 +733,8 @@ do
                     Limit = limit
                 }
         )
+
+let stmts =
+    %% ws
+    -- +.(qty.[0..] / ';' * selectStmt)
+    -%> List.ofSeq
