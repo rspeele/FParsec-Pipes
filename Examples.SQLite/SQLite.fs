@@ -688,3 +688,48 @@ let compoundExpr =
     %% +.(compoundTerm |>> CompoundTerm)
     -- +.(compoundNext * qty.[0..])
     -%> Seq.fold (|>)
+
+let orderingTerm =
+    %% +.expr
+    -- +.[
+            %% kw "DESC" -%> Descending
+            %% kw "ASC" -%> Ascending
+        ]
+    -- ws
+    -%> fun expr dir -> { By = expr; Direction = dir }
+
+let orderBy =
+    %% kw "ORDER"
+    -- ws
+    -- kw "BY"
+    -- ws
+    -- +.(orderingTerm * qty.[1..])
+    -%> auto
+
+let limit =
+    let offset =
+        %% [kw ","; kw "OFFSET"]
+        -- ws
+        -- +.expr
+        -%> auto
+    %% kw "LIMIT"
+    -- ws
+    -- +.expr
+    -- +.(zeroOrOne * offset)
+    -%> fun limit offset -> { Limit = limit; Offset = offset }
+
+do
+    selectStmtImpl :=
+        (
+            %% +.(zeroOrOne * commonTableExpression)
+            -- +.compoundExpr
+            -- +.(zeroOrOne * orderBy)
+            -- +.(zeroOrOne * limit)
+            -%> fun cte comp orderBy limit ->
+                {
+                    With = cte
+                    Compound = comp
+                    OrderBy = orderBy
+                    Limit = limit
+                }
+        )

@@ -149,7 +149,7 @@ and SelectStmt =
     {
         With : CommonTableExpression option
         Compound : CompoundExpr
-        OrderBy : OrderingTerm ResizeArray
+        OrderBy : OrderingTerm ResizeArray option
         Limit : Limit option
     }
 
