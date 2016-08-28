@@ -146,7 +146,53 @@ and InSet =
     | InTable of TableInvocation
 
 and SelectStmt =
-    | SelectStmt
+    {
+        With : CommonTableExpression option
+        Compound : CompoundTableExpr
+        OrderBy : OrderingTerm ResizeArray
+        Limit : Limit option
+    }
+
+and OrderDirection =
+    | Ascending
+    | Descending
+
+and OrderingTerm =
+    {
+        By : Expr
+        Direction : OrderDirection
+    }
+
+and Limit =
+    {
+        Limit : Expr
+        Offset : Expr option
+    }
+
+and CompoundTableExpr =
+    | CompoundTerm of CompoundTerm
+    | Union of CompoundTerm * CompoundTableExpr
+    | UnionAll of CompoundTerm * CompoundTableExpr
+    | Intersect of CompoundTerm * CompoundTableExpr
+    | Except of CompoundTerm * CompoundTableExpr
+
+and CompoundTerm =
+    | Values of Expr ResizeArray
+    | Select of SelectCore
+
+and SelectCore =
+    {
+        Columns : ResultColumn ResizeArray
+        From : TableExpr
+        Where : Expr option
+        GroupBy : GroupBy option
+    }
+
+and GroupBy =
+    {
+        By : Expr ResizeArray
+        Having : Expr option
+    }
 
 and ResultColumn =
     | ColumnsWildcard
