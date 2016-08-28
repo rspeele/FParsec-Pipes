@@ -24,6 +24,8 @@ type Literal =
 
 type Name = string
 
+type Alias = Name option
+
 type TypeBounds =
     {
         Low : SignedNumericLiteral
@@ -149,7 +151,16 @@ and SelectStmt =
 and ResultColumn =
     | ColumnsWildcard
     | TableColumnsWildcard of TableName
-    | Column of Expr * Name option
+    | Column of Expr * Alias
+
+and IndexHint =
+    | IndexedBy of Name
+    | NotIndexed
+
+and TableOrSubquery =
+    | Table of TableInvocation * Alias * IndexHint option // note: an index hint is invalid if the table has args
+    | Subquery of SelectStmt * Alias
+
 
 and CommonTableExpression =
     {

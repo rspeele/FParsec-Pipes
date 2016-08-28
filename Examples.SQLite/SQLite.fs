@@ -297,6 +297,8 @@ let columnName =
         | 3 -> { Table = Some { SchemaName = Some names.[0]; TableName = names.[1] }; ColumnName = names.[2] }
         | _ -> failwith "Unreachable"
 
+let indexName = name // TODO: can this have a schema name too?
+
 let namedBindParameter =
     %% +.['@'; ':'; '$']
     -- +.name
@@ -540,11 +542,12 @@ let commonTableExpression =
     -%> fun recurs cteName columnNames asSelect ->
         { Name = cteName; Recursive = Option.isSome recurs; ColumnNames = columnNames; AsSelect = asSelect }
 
+let asAlias =
+    %% ((kw "AS" .>> ws) * zeroOrOne)
+    -- +.name
+    -%> auto
+
 let resultColumn =
-    let asAlias =
-        %% ((kw "AS" .>> ws) * zeroOrOne)
-        -- +.name
-        -%> auto
     %% +.[
         %% '*' -%> ColumnsWildcard
         %% +.tableName -- '.' -? '*' -%> TableColumnsWildcard
@@ -561,6 +564,19 @@ let selectColumns =
         ]
     -- +.(qty.[1..] / ',' * resultColumn)
     -%> auto
+
+let tableOrSubquery =
+    let indexHint =
+        %[
+            %% kw "INDEXED" -- ws -- "BY" -- ws -- +.indexName -%> IndexedBy
+            %% kw "NOT" -- ws -- "INDEXED" -%> NotIndexed
+        ]
+    %[
+        %% +.tableInvocation -- +.(asAlias * zeroOrOne) -- +.(indexHint * zeroOrOne)
+            -%> fun table alias indexed -> Table (table, alias, indexed)
+        %% '(' -- ws -- +.selectStmt -- ')' -- ws -- +.(asAlias * zeroOrOne)
+            -%> fun subquery alias -> Subquery (subquery, alias)
+    ]
 
 let valuesClause =
     %% kw "VALUES"
