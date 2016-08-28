@@ -536,6 +536,7 @@ let commonTableExpression =
     -- '('
     -- +.selectStmt
     -- ')'
+    -- ws
     -%> fun recurs cteName columnNames asSelect ->
         { Name = cteName; Recursive = Option.isSome recurs; ColumnNames = columnNames; AsSelect = asSelect }
 
@@ -559,4 +560,12 @@ let selectColumns =
             preturn None
         ]
     -- +.(qty.[1..] / ',' * resultColumn)
+    -%> auto
+
+let valuesClause =
+    %% kw "VALUES"
+    -- ws
+    -- '('
+    -- +.(qty.[0..] / ',' * expr)
+    -- ')'
     -%> auto
