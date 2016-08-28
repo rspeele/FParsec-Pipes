@@ -565,18 +565,59 @@ let selectColumns =
     -- +.(qty.[1..] / ',' * resultColumn)
     -%> auto
 
-let tableOrSubquery =
+let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
     let indexHint =
         %[
-            %% kw "INDEXED" -- ws -- "BY" -- ws -- +.indexName -%> IndexedBy
-            %% kw "NOT" -- ws -- "INDEXED" -%> NotIndexed
+            %% kw "INDEXED" -- ws -- kw "BY" -- ws -- +.indexName -%> IndexedBy
+            %% kw "NOT" -- ws -- kw "INDEXED" -%> NotIndexed
+        ]
+    let subterm =
+        %[
+            %% +.selectStmt -%> fun select alias -> TableOrSubquery (Subquery (select, alias))
+            %% +.tableExpr -%> fun table alias -> AliasedTableExpr (table, alias)
         ]
     %[
         %% +.tableInvocation -- +.(asAlias * zeroOrOne) -- +.(indexHint * zeroOrOne)
-            -%> fun table alias indexed -> Table (table, alias, indexed)
-        %% '(' -- ws -- +.selectStmt -- ')' -- ws -- +.(asAlias * zeroOrOne)
-            -%> fun subquery alias -> Subquery (subquery, alias)
+            -%> fun table alias indexed -> TableOrSubquery (Table (table, alias, indexed))
+        %% '(' -- ws -- +.subterm -- ')' -- ws -- +.(asAlias * zeroOrOne) -%> (<|)
     ]
+
+let joinType =
+    %[
+        %% kw "LEFT" -- ws -- (kw "OUTER" * zeroOrOne) -%> LeftOuter
+        %% kw "INNER" -%> Inner
+        %% kw "CROSS" -%> Cross
+        %% ws -%> Inner
+    ]
+
+let joinConstraint =
+    %[
+        %% kw "ON" -- ws -- +.expr -- ws -%> JoinOn
+        %% kw "USING" -- ws -- '(' -- ws -- +.(qty.[1..] / ',' * (columnName .>> ws)) -- ')' -- ws
+            -%> fun cols -> JoinUsing (List.ofSeq cols)
+        preturn JoinUnconstrained
+    ]
+
+let tableExpr =
+    precursive <| fun tableExpr ->
+        let term = tableOrSubquery tableExpr 
+        let natural = %% kw "NATURAL" -- ws -%> ()   
+        let join =
+            %% +.[
+                    %% ',' -%> fun left right constr -> Join (Inner, left, right, constr)
+                    %% +.(natural * zeroOrOne) -- +.joinType -- kw "JOIN" -- ws
+                        -%> fun natural join left right constr ->
+                            let joinType = if Option.isSome natural then Natural join else join
+                            Join (joinType, left, right, constr)
+                ]
+            -- ws
+            -- +.term
+            -- ws
+            -- +.joinConstraint
+            -%> fun f joinTo joinOn left -> f left joinTo joinOn
+        %% +.term
+        -- +.(join * qty.[0..])
+        -%> Seq.fold (|>)
 
 let valuesClause =
     %% kw "VALUES"

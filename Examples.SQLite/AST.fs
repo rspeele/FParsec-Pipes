@@ -161,6 +161,21 @@ and TableOrSubquery =
     | Table of TableInvocation * Alias * IndexHint option // note: an index hint is invalid if the table has args
     | Subquery of SelectStmt * Alias
 
+and JoinType =
+    | Inner
+    | LeftOuter
+    | Cross
+    | Natural of JoinType
+
+and JoinConstraint =
+    | JoinOn of Expr
+    | JoinUsing of ColumnName list
+    | JoinUnconstrained
+
+and TableExpr =
+    | TableOrSubquery of TableOrSubquery
+    | AliasedTableExpr of TableExpr * Alias
+    | Join of JoinType *  TableExpr * TableExpr * JoinConstraint
 
 and CommonTableExpression =
     {
