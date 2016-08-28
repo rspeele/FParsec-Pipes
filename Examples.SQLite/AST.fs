@@ -148,7 +148,7 @@ and InSet =
 and SelectStmt =
     {
         With : CommonTableExpression option
-        Compound : CompoundTableExpr
+        Compound : CompoundExpr
         OrderBy : OrderingTerm ResizeArray
         Limit : Limit option
     }
@@ -169,12 +169,12 @@ and Limit =
         Offset : Expr option
     }
 
-and CompoundTableExpr =
+and CompoundExpr =
     | CompoundTerm of CompoundTerm
-    | Union of CompoundTerm * CompoundTableExpr
-    | UnionAll of CompoundTerm * CompoundTableExpr
-    | Intersect of CompoundTerm * CompoundTableExpr
-    | Except of CompoundTerm * CompoundTableExpr
+    | Union of CompoundExpr * CompoundTerm
+    | UnionAll of CompoundExpr * CompoundTerm
+    | Intersect of CompoundExpr * CompoundTerm
+    | Except of CompoundExpr * CompoundTerm
 
 and CompoundTerm =
     | Values of Expr ResizeArray
@@ -182,7 +182,7 @@ and CompoundTerm =
 
 and SelectCore =
     {
-        Columns : ResultColumn ResizeArray
+        Columns : ResultColumns
         From : TableExpr
         Where : Expr option
         GroupBy : GroupBy option
@@ -192,6 +192,12 @@ and GroupBy =
     {
         By : Expr ResizeArray
         Having : Expr option
+    }
+
+and ResultColumns =
+    {
+        Distinct : DistinctColumns option
+        Columns : ResultColumn ResizeArray
     }
 
 and ResultColumn =

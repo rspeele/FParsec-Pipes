@@ -563,7 +563,7 @@ let selectColumns =
             preturn None
         ]
     -- +.(qty.[1..] / ',' * resultColumn)
-    -%> auto
+    -%> fun distinct cols -> { Distinct = distinct; Columns = cols }
 
 let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
     let indexHint =
@@ -616,6 +616,7 @@ let tableExpr =
             -- +.joinConstraint
             -%> fun f joinTo joinOn left -> f left joinTo joinOn
         %% +.term
+        -- ws
         -- +.(join * qty.[0..])
         -%> Seq.fold (|>)
 
@@ -625,4 +626,65 @@ let valuesClause =
     -- '('
     -- +.(qty.[0..] / ',' * expr)
     -- ')'
+    -- ws
     -%> auto
+
+let whereClause =
+    %% kw "WHERE"
+    -- ws
+    -- +.expr
+    -- ws
+    -%> auto
+
+let havingClause =
+    %% kw "HAVING"
+    -- ws
+    -- +.expr
+    -%> auto
+
+let groupByClause =
+    %% kw "GROUP"
+    -- ws
+    -- kw "BY"
+    -- ws
+    -- +.(qty.[1..] / ',' * expr)
+    -- +.(zeroOrOne * havingClause)
+    -%> fun by having -> { By = by; Having = having }
+
+let selectCore =
+    %% +.selectColumns
+    -- kw "FROM"
+    -- ws
+    -- +.tableExpr
+    -- +.(whereClause * zeroOrOne)
+    -- +.(groupByClause * zeroOrOne)
+    -%> fun cols table where groupBy ->
+        {
+            Columns = cols
+            From = table
+            Where = where
+            GroupBy = groupBy
+        }
+
+let compoundTerm =
+    %[
+        %% +.valuesClause -%> Values
+        %% +.selectCore -%> Select
+    ]
+
+let compoundExpr =
+    let compoundOperation =
+        %[
+            %% kw "UNION" -- ws -- +.(zeroOrOne * (%% kw "ALL" -- ws -%> ())) -%> function
+                | Some () -> fun left right -> UnionAll (left, right)
+                | None -> fun left right -> Union (left, right)
+            %% kw "INTERSECT" -- ws -%> fun left right -> Intersect (left, right)
+            %% kw "EXCEPT" -- ws -%> fun left right -> Except (left, right)
+        ]
+    let compoundNext =
+        %% +.compoundOperation
+        -- +.compoundTerm
+        -%> fun f right left -> f left right
+    %% +.(compoundTerm |>> CompoundTerm)
+    -- +.(compoundNext * qty.[0..])
+    -%> Seq.fold (|>)
