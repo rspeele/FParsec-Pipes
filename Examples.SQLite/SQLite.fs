@@ -393,8 +393,7 @@ let inOperator =
     %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
     -- kw "IN"
     ?- ws
-    --
-        +.[
+    -- +.[
             %% '('
             -- ws
             --
@@ -412,8 +411,7 @@ let inOperator =
 
 let similarityOperator =
     %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
-    -? +.
-        [
+    -? +.[
             %% kw "LIKE" -%> Like
             %% kw "GLOB" -%> Glob
             %% kw "MATCH" -%> Match
@@ -511,6 +509,7 @@ let private operators = [
         infixl (kw "OR") <| binary Or
     ]
 ]
+
 do
     exprImpl :=
         {
@@ -518,3 +517,46 @@ do
             Term = term
             Operators = operators    
         } |> Precedence.expression
+
+let commonTableExpression =
+    let columnNames =
+        %% '('
+        -- ws
+        -- +.(qty.[0..] / ',' * (columnName .>> ws))
+        -- ')'
+        -%> id
+    %% kw "WITH"
+    -- ws
+    -- +.((kw "RECURSIVE" .>> ws) * zeroOrOne)
+    -- +.tableName
+    -- ws
+    -- +.(columnNames * zeroOrOne)
+    -- kw "AS"
+    -- ws
+    -- '('
+    -- +.selectStmt
+    -- ')'
+    -%> fun recurs cteName columnNames asSelect ->
+        { Name = cteName; Recursive = Option.isSome recurs; ColumnNames = columnNames; AsSelect = asSelect }
+
+let resultColumn =
+    let asAlias =
+        %% ((kw "AS" .>> ws) * zeroOrOne)
+        -- +.name
+        -%> auto
+    %% +.[
+        %% '*' -%> ColumnsWildcard
+        %% +.tableName -- '.' -? '*' -%> TableColumnsWildcard
+        %% +.expr -- +.(asAlias * zeroOrOne) -%> fun ex alias -> Column (ex, alias)
+    ] -- ws -%> auto
+
+let selectColumns =
+    %% kw "SELECT"
+    -- ws
+    -- +.[
+            %% kw "DISTINCT" -- ws -%> Some DistinctColumns
+            %% kw "ALL" -- ws -%> Some AllColumns
+            preturn None
+        ]
+    -- +.(qty.[1..] / ',' * resultColumn)
+    -%> auto

@@ -130,6 +130,10 @@ and CaseExpr =
 
 and Distinct = | Distinct
 
+and DistinctColumns =
+    | DistinctColumns
+    | AllColumns
+
 and FunctionArguments =
     | ArgumentWildcard
     | ArgumentList of (Distinct option * Expr ResizeArray)
@@ -141,3 +145,16 @@ and InSet =
 
 and SelectStmt =
     | SelectStmt
+
+and ResultColumn =
+    | ColumnsWildcard
+    | TableColumnsWildcard of TableName
+    | Column of Expr * Name option
+
+and CommonTableExpression =
+    {
+        Name : TableName
+        Recursive : bool
+        ColumnNames : ColumnName ResizeArray option
+        AsSelect : SelectStmt
+    }
