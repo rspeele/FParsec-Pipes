@@ -190,7 +190,7 @@ let stringLiteral =
     let regularChars =
         many1Satisfy ((<>) '\'') // Any run of non-quote characters is literal
     %% '\'' -- +.([regularChars; escapedQuote] * qty.[0..]) -- '\''
-    -%> (String.Concat >> StringLiteral)
+    -%> String.Concat
 
 (**
 
@@ -209,7 +209,8 @@ let blobLiteral =
     let octet =
         %% +.(2, hex)
         -%> fun pair -> Byte.Parse(String(pair), NumberStyles.HexNumber)
-    %% ['x';'X'] -- '\''
+    %% ['x';'X']
+    -? '\''
     -- +.(octet * qty.[0..])
     -- '\''
     -%> (Seq.toArray >> BlobLiteral)
@@ -259,7 +260,7 @@ We then combine the literal definitions into one.
 let literal =
     %[
         %% +.numericLiteral -%> NumericLiteral
-        stringLiteral
+        %% +.stringLiteral -%> StringLiteral
         blobLiteral
         nullLiteral
         currentTimeLiteral
@@ -293,7 +294,7 @@ let tableName =
         | Some name2 -> { SchemaName = Some name; TableName = name2 }
 
 let columnName =
-    qty.[1..3] / '.' * (name .>> ws)
+    qty.[1..3] / tws '.' * (name .>> ws)
     |>> fun names ->
         match names.Count with
         | 1 -> { Table = None; ColumnName = names.[0] }
@@ -548,7 +549,7 @@ let commonTableExpression =
 
 let asAlias =
     %% ((kw "AS" .>> ws) * zeroOrOne)
-    -? +.name
+    -? +.[ name; stringLiteral ]
     -%> id
 
 let resultColumn =
@@ -698,6 +699,7 @@ let orderingTerm =
     -- +.[
             %% kw "DESC" -%> Descending
             %% kw "ASC" -%> Ascending
+            preturn Ascending
         ]
     -- ws
     -%> fun expr dir -> { By = expr; Direction = dir }
@@ -740,7 +742,7 @@ do
 
 let private stmtsAtLeast min =
     %% ws
-    -- +.(qty.[min..] / ';' * selectStmt)
+    -- +.(qty.[min..] /. tws ';' * selectStmt)
     -%> List.ofSeq
 
 let stmts = stmtsAtLeast 0

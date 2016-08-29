@@ -48,7 +48,8 @@ type Tests() =
     [<TestMethod>]
     member __.TestOnSelects() =
         for file in Directory.GetFiles("../../Tests", "*.test") do
-            printfn "### File: %s ###" (Path.GetFileNameWithoutExtension(file))
+            let name = Path.GetFileNameWithoutExtension(file)
+            printfn "### File: %s ###" name
             let text =
                 File.ReadAllLines(file)
                 |> Array.filter (fun s -> not (s.StartsWith("#")))
@@ -65,5 +66,5 @@ type Tests() =
                         Console.WriteLine(new String('-', 80))
                         printf "%A" result
                         Console.WriteLine(new String('-', 80))
-                    | Failure(msg, _, _) -> failwithf "Failure: %s" msg
+                    | Failure(msg, _, _) -> failwithf "Failure in %s: %s" name msg
                     startIndex <- index + 1
