@@ -1,5 +1,7 @@
 ﻿namespace Examples.SQLite.Tests
 open Microsoft.VisualStudio.TestTools.UnitTesting
+open System
+open System.IO
 open FParsec
 open FParsec.Pipes
 open Examples.SQLite
@@ -10,6 +12,7 @@ type Tests() =
         match run (SQLiteParser.stmts .>> eof) sql with
         | Success(result, _, _) -> printf "%A" result
         | Failure(msg, _, _) -> failwithf "Failure: %s" msg
+
     [<TestMethod>]
     member __.TestSimpleSelect() =
         test @"select * from users u where u.id = 1"
@@ -37,3 +40,26 @@ type Tests() =
             order by u.name desc
             limit 5
         "
+
+    [<TestMethod>]
+    member __.TestOnSelects() =
+        for file in Directory.GetFiles("../../Tests", "*.test") do
+            printfn "### File: %s ###" (Path.GetFileNameWithoutExtension(file))
+            let text =
+                File.ReadAllLines(file)
+                |> Array.filter (fun s -> not (s.StartsWith("#")))
+                |> String.concat Environment.NewLine
+            let mutable startIndex = 0
+            while startIndex >= 0 do
+                let index = text.IndexOf("SELECT ", startIndex, StringComparison.OrdinalIgnoreCase)
+                if index < 0 then
+                    startIndex <- -1
+                else
+                    let substr = text.Substring(index)
+                    match run SQLiteParser.stmts1 substr with
+                    | Success(result, _, _) ->
+                        Console.WriteLine(new String('-', 80))
+                        printf "%A" result
+                        Console.WriteLine(new String('-', 80))
+                    | Failure(msg, _, _) -> failwithf "Failure: %s" msg
+                    startIndex <- index + 1

@@ -737,7 +737,10 @@ do
                 }
         )
 
-let stmts =
+let private stmtsAtLeast min =
     %% ws
-    -- +.(qty.[0..] / ';' * selectStmt)
+    -- +.(qty.[min..] / ';' * selectStmt)
     -%> List.ofSeq
+
+let stmts = stmtsAtLeast 0
+let stmts1 = stmtsAtLeast 1
