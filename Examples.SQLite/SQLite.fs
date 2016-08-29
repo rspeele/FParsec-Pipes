@@ -284,12 +284,13 @@ let typeName =
     -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds }
     
 let tableName =
-    qty.[1..2] / tws '.' * (name .>> ws)
-    |>> fun names ->
-        match names.Count with
-        | 1 -> { SchemaName = None; TableName = names.[0] }
-        | 2 -> { SchemaName = Some names.[0]; TableName = names.[1] }
-        | _ -> failwith "Unreachable"
+    %% +.name
+    -- ws
+    -- +.(zeroOrOne * (%% '.' -- ws -? +.name -%> id))
+    -%> fun name name2 ->
+        match name2 with
+        | None -> { SchemaName = None; TableName = name }
+        | Some name2 -> { SchemaName = Some name; TableName = name2 }
 
 let columnName =
     qty.[1..3] / '.' * (name .>> ws)
@@ -456,10 +457,10 @@ let term expr =
         %% '(' -- ws -- +. expr -- ')' -%> auto
         %% +.literal -%> LiteralExpr
         %% +.bindParameter -%> BindParameterExpr
-        %% +.columnName -%> ColumnNameExpr
         %% +.cast expr -%> CastExpr
         %% +.case expr -%> CaseExpr
         %% +.functionInvocation expr -%> FunctionInvocationExpr
+        %% +.columnName -%> ColumnNameExpr
     ]
 
 let private operators = [

@@ -29,6 +29,10 @@ type Tests() =
         "
 
     [<TestMethod>]
+    member __.TestMultipleColumns() =
+        test @"select u.id , 1+max(1,y) , u.* , func(x) from users u where u.id = 1"
+
+    [<TestMethod>]
     member __.TestVariousJoinTypes() =
         test @"
             select * from users
