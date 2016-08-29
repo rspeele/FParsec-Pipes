@@ -42,6 +42,9 @@ let whitespaceUnit =
 /// Optional whitespace: 0 or more whitespace units
 let ws = skipMany whitespaceUnit
 
+/// Add optional trailing whitespace to a parser.
+let inline tws parser = %parser .>> ws
+
 /// Required whitespace: 1 or more whitespace units
 let ws1 = skipMany1 whitespaceUnit
 
@@ -126,7 +129,7 @@ let isFollowingIdentifierCharacter c =
 let unquotedName =
     let identifier =
         many1Satisfy2 isInitialIdentifierCharacter isFollowingIdentifierCharacter
-    identifier >>= fun ident ->
+    identifier >>=? fun ident ->
         if sqlKeywords.Contains(ident) then
             fail (sprintf "Reserved keyword %s used as name" ident)
         else
@@ -267,7 +270,7 @@ let literal =
 let typeBounds =
     %% '('
     -- ws
-    -- +.(qty.[1..2] / ',' * (signedNumericLiteral .>> ws))
+    -- +.(qty.[1..2] / tws ',' * (signedNumericLiteral .>> ws))
     -- ')'
     -%> fun bounds ->
         match bounds.Count with
@@ -281,7 +284,7 @@ let typeName =
     -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds }
     
 let tableName =
-    qty.[1..2] / '.' * (name .>> ws)
+    qty.[1..2] / tws '.' * (name .>> ws)
     |>> fun names ->
         match names.Count with
         | 1 -> { SchemaName = None; TableName = names.[0] }
@@ -315,7 +318,7 @@ let functionArguments (expr : Parser<Expr, unit>) =
     %[
         %% '*' -- ws -%> ArgumentWildcard
         %% +.((%% kw "DISTINCT" -- ws -%> Distinct) * zeroOrOne)
-        -- +.(qty.[0..] / ',' * expr)
+        -- +.(qty.[0..] / tws ',' * expr)
         -%> fun distinct args -> ArgumentList (distinct, args)
     ]
 
@@ -372,7 +375,7 @@ let private selectStmt, selectStmtImpl = createParserForwardedToRef<SelectStmt, 
 
 let tableInvocation =
     let args =
-        %% '(' -- ws -- +.(qty.[0..] / ',' * expr) -- ')' -%> auto
+        %% '(' -- ws -- +.(qty.[0..] / tws ',' * expr) -- ')' -%> auto
     %% +.tableName
     -- ws
     -- +.(args * zeroOrOne)
@@ -401,7 +404,7 @@ let inOperator =
             --
                 +.[
                     %% +.selectStmt -%> InSelect
-                    %% +.(qty.[0..] / ',' * expr) -%> InExpressions
+                    %% +.(qty.[0..] / tws ',' * expr) -%> InExpressions
                 ]
             -- ')'
             -%> id
@@ -490,7 +493,7 @@ let private operators = [
     [
         infixl ">=" <| binary GreaterThanOrEqual
         infixl "<=" <| binary LessThanOrEqual
-        infixl (%'<' >>. notFollowedBy (skipChar '>')) <| binary LessThan
+        infixl (%% '<' -? notFollowedBy (skipChar '>') -%> ()) <| binary LessThan
         infixl '>' <| binary GreaterThan
     ]
     [
@@ -524,7 +527,7 @@ let commonTableExpression =
     let columnNames =
         %% '('
         -- ws
-        -- +.(qty.[0..] / ',' * (columnName .>> ws))
+        -- +.(qty.[0..] / tws ',' * (columnName .>> ws))
         -- ')'
         -%> id
     %% kw "WITH"
@@ -544,15 +547,15 @@ let commonTableExpression =
 
 let asAlias =
     %% ((kw "AS" .>> ws) * zeroOrOne)
-    -- +.name
-    -%> auto
+    -? +.name
+    -%> id
 
 let resultColumn =
     %% +.[
         %% '*' -%> ColumnsWildcard
         %% +.tableName -- '.' -? '*' -%> TableColumnsWildcard
         %% +.expr -- +.(asAlias * zeroOrOne) -%> fun ex alias -> Column (ex, alias)
-    ] -- ws -%> auto
+    ] -- ws -%> id
 
 let selectColumns =
     %% kw "SELECT"
@@ -562,7 +565,7 @@ let selectColumns =
             %% kw "ALL" -- ws -%> Some AllColumns
             preturn None
         ]
-    -- +.(qty.[1..] / ',' * resultColumn)
+    -- +.(qty.[1..] / tws ',' * resultColumn)
     -%> fun distinct cols -> { Distinct = distinct; Columns = cols }
 
 let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
@@ -584,16 +587,16 @@ let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
 
 let joinType =
     %[
-        %% kw "LEFT" -- ws -- (kw "OUTER" * zeroOrOne) -%> LeftOuter
-        %% kw "INNER" -%> Inner
-        %% kw "CROSS" -%> Cross
+        %% kw "LEFT" -- ws -- ((kw "OUTER" .>> ws) * zeroOrOne) -%> LeftOuter
+        %% kw "INNER" -- ws -%> Inner
+        %% kw "CROSS" -- ws -%> Cross
         %% ws -%> Inner
     ]
 
 let joinConstraint =
     %[
         %% kw "ON" -- ws -- +.expr -- ws -%> JoinOn
-        %% kw "USING" -- ws -- '(' -- ws -- +.(qty.[1..] / ',' * (columnName .>> ws)) -- ')' -- ws
+        %% kw "USING" -- ws -- '(' -- ws -- +.(qty.[1..] / tws ',' * (columnName .>> ws)) -- ')' -- ws
             -%> fun cols -> JoinUsing (List.ofSeq cols)
         preturn JoinUnconstrained
     ]
@@ -624,30 +627,30 @@ let valuesClause =
     %% kw "VALUES"
     -- ws
     -- '('
-    -- +.(qty.[0..] / ',' * expr)
+    -- +.(qty.[0..] / tws ',' * expr)
     -- ')'
     -- ws
-    -%> auto
+    -%> id
 
 let whereClause =
     %% kw "WHERE"
     -- ws
     -- +.expr
     -- ws
-    -%> auto
+    -%> id
 
 let havingClause =
     %% kw "HAVING"
     -- ws
     -- +.expr
-    -%> auto
+    -%> id
 
 let groupByClause =
     %% kw "GROUP"
     -- ws
     -- kw "BY"
     -- ws
-    -- +.(qty.[1..] / ',' * expr)
+    -- +.(qty.[1..] / tws ',' * expr)
     -- +.(zeroOrOne * havingClause)
     -%> fun by having -> { By = by; Having = having }
 
@@ -703,15 +706,15 @@ let orderBy =
     -- ws
     -- kw "BY"
     -- ws
-    -- +.(qty.[1..] / ',' * orderingTerm)
-    -%> auto
+    -- +.(qty.[1..] / tws ',' * orderingTerm)
+    -%> id
 
 let limit =
     let offset =
         %% [kw ","; kw "OFFSET"]
         -- ws
         -- +.expr
-        -%> auto
+        -%> id
     %% kw "LIMIT"
     -- ws
     -- +.expr
