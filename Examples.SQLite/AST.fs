@@ -183,7 +183,7 @@ and CompoundTerm =
 and SelectCore =
     {
         Columns : ResultColumns
-        From : TableExpr
+        From : TableExpr option
         Where : Expr option
         GroupBy : GroupBy option
     }

@@ -634,6 +634,12 @@ let valuesClause =
     -- ws
     -%> id
 
+let fromClause =
+    %% kw "FROM"
+    -- ws
+    -- +.tableExpr
+    -%> id
+
 let whereClause =
     %% kw "WHERE"
     -- ws
@@ -658,9 +664,7 @@ let groupByClause =
 
 let selectCore =
     %% +.selectColumns
-    -- kw "FROM"
-    -- ws
-    -- +.tableExpr
+    -- +.(fromClause * zeroOrOne)
     -- +.(whereClause * zeroOrOne)
     -- +.(groupByClause * zeroOrOne)
     -%> fun cols table where groupBy ->
