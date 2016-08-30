@@ -109,9 +109,10 @@ let sqlKeywords =
         "OFFSET"; "ON"; "OR"; "ORDER"; "OUTER"; "PLAN"; "PRAGMA"; "PRIMARY";
         "QUERY"; "RAISE"; "RECURSIVE"; "REFERENCES"; "REGEXP"; "REINDEX";
         "RELEASE"; "RENAME"; "REPLACE"; "RESTRICT"; "RIGHT"; "ROLLBACK"; "ROW";
-        "SAVEPOINT"; "SELECT"; "SET"; "TABLE"; "TEMP"; "TEMPORARY"; "THEN";
+        "SAVEPOINT"; "SELECT"; "SET"; "TABLE"; "TEMPORARY"; "THEN";
         "TO"; "TRANSACTION"; "TRIGGER"; "UNION"; "UNIQUE"; "UPDATE"; "USING";
         "VACUUM"; "VALUES"; "VIEW"; "VIRTUAL"; "WHEN"; "WHERE"; "WITH"; "WITHOUT"
+        // Note: we don't include TEMP in this list because it is a schema name.
     ] |> fun kws ->
         HashSet<string>(kws, StringComparer.OrdinalIgnoreCase)
         // Since SQL is case-insensitive, be sure to ignore case
@@ -185,12 +186,13 @@ Next are string literals, which are very similar to quoted identifiers.
 *)
 
 let stringLiteral =
-    let escapedQuote =
+   (let escapedQuote =
         %% "''" -%> "'" // A pair of single quotes escapes a single quote character
     let regularChars =
         many1Satisfy ((<>) '\'') // Any run of non-quote characters is literal
     %% '\'' -- +.([regularChars; escapedQuote] * qty.[0..]) -- '\''
-    -%> String.Concat
+    -%> String.Concat)
+    <?> "string-literal"
 
 (**
 
@@ -209,11 +211,12 @@ let blobLiteral =
     let octet =
         %% +.(2, hex)
         -%> fun pair -> Byte.Parse(String(pair), NumberStyles.HexNumber)
-    %% ['x';'X']
+    (%% ['x';'X']
     -? '\''
     -- +.(octet * qty.[0..])
     -- '\''
-    -%> (Seq.toArray >> BlobLiteral)
+    -%> (Seq.toArray >> BlobLiteral))
+    <?> "blob-literal"
 
 (**
 
@@ -231,7 +234,7 @@ let numericLiteral =
         ||| NumberLiteralOptions.AllowFraction
         ||| NumberLiteralOptions.AllowFractionWOIntegerPart
         ||| NumberLiteralOptions.AllowExponent
-    numberLiteral options "numeric literal" >>= fun lit ->
+    numberLiteral options "numeric-literal" >>= fun lit ->
         if lit.IsInteger then
             lit.String |> int64 |> IntegerLiteral |> preturn
         else if lit.IsHexadecimal then
@@ -280,27 +283,30 @@ let typeBounds =
         | _ -> failwith "Unreachable"
 
 let typeName =
-    %% +.(qty.[1..] /. ws * name)
+    (%% +.(qty.[1..] /. ws * name)
     -- +.(typeBounds * zeroOrOne)
-    -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds }
+    -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds })
+    <?> "type-name"
     
 let tableName =
-    %% +.name
+    (%% +.name
     -- ws
     -- +.(zeroOrOne * (%% '.' -- ws -? +.name -%> id))
     -%> fun name name2 ->
         match name2 with
         | None -> { SchemaName = None; TableName = name }
-        | Some name2 -> { SchemaName = Some name; TableName = name2 }
+        | Some name2 -> { SchemaName = Some name; TableName = name2 })
+    <?> "table-name"
 
 let columnName =
-    qty.[1..3] / tws '.' * (name .>> ws)
+    (qty.[1..3] / tws '.' * (name .>> ws)
     |>> fun names ->
         match names.Count with
         | 1 -> { Table = None; ColumnName = names.[0] }
         | 2 -> { Table = Some { SchemaName = None; TableName = names.[0] }; ColumnName = names.[1] }
         | 3 -> { Table = Some { SchemaName = Some names.[0]; TableName = names.[1] }; ColumnName = names.[2] }
-        | _ -> failwith "Unreachable"
+        | _ -> failwith "Unreachable")
+    <?> "column-name"
 
 let indexName = name // TODO: can this have a schema name too?
 
@@ -314,7 +320,9 @@ let positionalBindParameter =
     -- +.(p<uint32> * zeroOrOne)
     -%> PositionalParameter
 
-let bindParameter = %[ namedBindParameter; positionalBindParameter ]
+let bindParameter =
+    %[ namedBindParameter; positionalBindParameter ]
+    <?> "bind-parameter"
 
 let functionArguments (expr : Parser<Expr, unit>) =
     %[
@@ -391,7 +399,8 @@ let collateOperator =
 
 let isOperator =
     %% kw "IS"
-    -- +.((%% ws1 -- kw "NOT" -%> ()) * zeroOrOne)
+    -- ws
+    -- +.(kw "NOT" * zeroOrOne)
     -%> function
     | Some () -> binary IsNot
     | None -> binary Is
@@ -441,21 +450,15 @@ let betweenOperator =
     | Some () -> fun input low high -> NotBetweenExpr (input, low, high)
     | None -> fun input low high -> BetweenExpr (input, low, high)
 
-let existsOperator =
-    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
-    -? kw "EXISTS"
-    -- ws
-    -- '('
-    -- ws
-    -- +.selectStmt
-    -- ')'
-    -%> function
-    | Some () -> fun select input -> NotExistsExpr (input, select)
-    | None -> fun select input -> ExistsExpr (input, select)
-
 let term expr =
+    let parenthesized =
+        %[
+            %% +.selectStmt -%> ScalarSubqueryExpr
+            expr
+        ]
     %[
-        %% '(' -- ws -- +. expr -- ')' -%> auto
+        %% '(' -- ws -- +.parenthesized -- ')' -%> auto
+        %% kw "EXISTS" -- ws -- '(' -- ws -- +.selectStmt -- ')' -%> ExistsExpr
         %% +.literal -%> LiteralExpr
         %% +.bindParameter -%> BindParameterExpr
         %% +.cast expr -%> CastExpr
@@ -508,7 +511,6 @@ let private operators = [
         postfix (kw "ISNULL") <| fun left -> BinaryExpr (Is, left, LiteralExpr NullLiteral)
         postfixc notNullOperator
         postfixc inOperator
-        postfixc existsOperator
         ternarylc betweenOperator (kw "AND")
     ]
     [
@@ -626,11 +628,16 @@ let tableExpr =
         -%> Seq.fold (|>)
 
 let valuesClause =
+    let valuesRow =
+        %% '('
+        -- +.(qty.[0..] / tws ',' * expr)
+        -- ')'
+        -- ws
+        -%> id
+
     %% kw "VALUES"
     -- ws
-    -- '('
-    -- +.(qty.[0..] / tws ',' * expr)
-    -- ')'
+    -- +.(qty.[1..] / tws ',' * valuesRow)
     -- ws
     -%> id
 

@@ -105,24 +105,24 @@ do_test select3-2.12 {
   }
 } {0 {0 1 1 1 2 2 3 4 4 8 5 15}}
 
-# Cannot have an empty GROUP BY
-do_test select3-2.13 {
-  catchsql {
-    SELECT log, count(*) FROM t1 GROUP BY ORDER BY log;
-  }
-} {1 {near "ORDER": syntax error}}
-do_test select3-2.14 {
-  catchsql {
-    SELECT log, count(*) FROM t1 GROUP BY;
-  }
-} {1 {near ";": syntax error}}
+# # Cannot have an empty GROUP BY
+# do_test select3-2.13 {
+#   catchsql {
+#     SELECT log, count(*) FROM t1 GROUP BY ORDER BY log;
+#   }
+# } {1 {near "ORDER": syntax error}}
+# do_test select3-2.14 {
+#   catchsql {
+#     SELECT log, count(*) FROM t1 GROUP BY;
+#   }
+# } {1 {near ";": syntax error}}
 
-# Cannot have a HAVING without a GROUP BY
-#
-do_test select3-3.1 {
-  set v [catch {execsql {SELECT log, count(*) FROM t1 HAVING log>=4}} msg]
-  lappend v $msg
-} {1 {a GROUP BY clause is required before HAVING}}
+# # Cannot have a HAVING without a GROUP BY
+# #
+# do_test select3-3.1 {
+#   set v [catch {execsql {SELECT log, count(*) FROM t1 HAVING log>=4}} msg]
+#   lappend v $msg
+# } {1 {a GROUP BY clause is required before HAVING}}
 
 # Toss in some HAVING clauses
 #

@@ -43,48 +43,48 @@ source $testdir/tester.tcl
 #   The first argument, $TESTNAME, is used as the base test case name to
 #   pass to [do_test] for each individual LIMIT OFFSET test case.
 # 
-proc test_compound_select {testname sql result} {
+# proc test_compound_select {testname sql result} {
 
-  set nCol 1
-  db eval $sql A {
-    set nCol [llength $A(*)]
-    break
-  }
-  set nRow [expr {[llength $result] / $nCol}]
+#   set nCol 1
+#   db eval $sql A {
+#     set nCol [llength $A(*)]
+#     break
+#   }
+#   set nRow [expr {[llength $result] / $nCol}]
 
-  set ::compound_sql $sql
-  do_test $testname { 
-    execsql $::compound_sql
-  } $result
-#return
+#   set ::compound_sql $sql
+#   do_test $testname { 
+#     execsql $::compound_sql
+#   } $result
+# #return
 
-  set iLimitIncr  1
-  set iOffsetIncr 1
-  if {[info exists ::G(isquick)] && $::G(isquick) && $nRow>=5} {
-    set iOffsetIncr [expr $nRow / 5]
-    set iLimitIncr [expr $nRow / 5]
-  }
+#   set iLimitIncr  1
+#   set iOffsetIncr 1
+#   if {[info exists ::G(isquick)] && $::G(isquick) && $nRow>=5} {
+#     set iOffsetIncr [expr $nRow / 5]
+#     set iLimitIncr [expr $nRow / 5]
+#   }
 
-  set iLimitEnd   [expr $nRow+$iLimitIncr]
-  set iOffsetEnd  [expr $nRow+$iOffsetIncr]
+#   set iLimitEnd   [expr $nRow+$iLimitIncr]
+#   set iOffsetEnd  [expr $nRow+$iOffsetIncr]
 
-  for {set iOffset 0} {$iOffset < $iOffsetEnd} {incr iOffset $iOffsetIncr} {
-    for {set iLimit 0} {$iLimit < $iLimitEnd} {incr iLimit} {
+#   for {set iOffset 0} {$iOffset < $iOffsetEnd} {incr iOffset $iOffsetIncr} {
+#     for {set iLimit 0} {$iLimit < $iLimitEnd} {incr iLimit} {
   
-      set ::compound_sql "$sql LIMIT $iLimit"
-      if {$iOffset != 0} {
-        append ::compound_sql " OFFSET $iOffset"
-      }
+#       set ::compound_sql "$sql LIMIT $iLimit"
+#       if {$iOffset != 0} {
+#         append ::compound_sql " OFFSET $iOffset"
+#       }
   
-      set iStart [expr {$iOffset*$nCol}]
-      set iEnd [expr {($iOffset*$nCol) + ($iLimit*$nCol) -1}]
+#       set iStart [expr {$iOffset*$nCol}]
+#       set iEnd [expr {($iOffset*$nCol) + ($iLimit*$nCol) -1}]
   
-      do_test $testname.limit=$iLimit.offset=$iOffset { 
-        execsql $::compound_sql
-      } [lrange $result $iStart $iEnd]
-    }
-  }
-}
+#       do_test $testname.limit=$iLimit.offset=$iOffset { 
+#         execsql $::compound_sql
+#       } [lrange $result $iStart $iEnd]
+#     }
+#   }
+# }
 
 #-------------------------------------------------------------------------
 # test_compound_select_flippable TESTNAME SELECT RESULT
@@ -105,7 +105,7 @@ proc test_compound_select_flippable {testname sql result} {
 
   set select [string trim $sql]
   set RE {(.*)(UNION ALL|INTERSECT|UNION)(.*)(ORDER BY.*)}
-  set rc [regexp $RE $select -> s1 op s2 order_by]
+# set rc [regexp $RE $select -> s1 op s2 order_by]
   if {!$rc} {error "Statement is unflippable: $select"}
 
   set flipsql "$s2 $op $s1 $order_by"

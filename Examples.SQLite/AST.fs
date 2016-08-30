@@ -101,9 +101,9 @@ type Expr =
     | NotBetweenExpr of Expr * Expr * Expr
     | InExpr of Expr * InSet
     | NotInExpr of Expr * InSet
-    | ExistsExpr of Expr * SelectStmt
-    | NotExistsExpr of Expr * SelectStmt
+    | ExistsExpr of SelectStmt
     | CaseExpr of CaseExpr
+    | ScalarSubqueryExpr of SelectStmt
 
 and CastExpr =
     {
@@ -177,7 +177,7 @@ and CompoundExpr =
     | Except of CompoundExpr * CompoundTerm
 
 and CompoundTerm =
-    | Values of Expr ResizeArray
+    | Values of Expr ResizeArray ResizeArray
     | Select of SelectCore
 
 and SelectCore =

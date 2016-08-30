@@ -46,13 +46,23 @@ type Tests() =
         "
 
     [<TestMethod>]
+    member __.TestCompound() =
+        test @"
+            SELECT a AS x, sum(b) AS y FROM t1 GROUP BY a
+            UNION
+            SELECT 98 AS x, 99 AS y
+        "
+
+    [<TestMethod>]
     member __.TestOnSelects() =
+        let mutable total = 0
         for file in Directory.GetFiles("../../Tests", "*.test") do
+            let mutable good = 0
             let name = Path.GetFileNameWithoutExtension(file)
             printfn "### File: %s ###" name
             let text =
                 File.ReadAllLines(file)
-                |> Array.filter (fun s -> not (s.StartsWith("#")))
+                |> Array.filter (fun s -> not (s.TrimStart().StartsWith("#")))
                 |> String.concat Environment.NewLine
             let mutable startIndex = 0
             while startIndex >= 0 do
@@ -63,8 +73,11 @@ type Tests() =
                     let substr = text.Substring(index)
                     match run SQLiteParser.stmts1 substr with
                     | Success(result, _, _) ->
-                        Console.WriteLine(new String('-', 80))
-                        printf "%A" result
-                        Console.WriteLine(new String('-', 80))
-                    | Failure(msg, _, _) -> failwithf "Failure in %s: %s" name msg
+                        good <- good + List.length result
+                    | Failure(msg, _, _) ->
+                        let truncated = if substr.Length > 120 then substr.Substring(0, 120) else substr
+                        failwithf "Failure (after %d successes). In %s:\r\n%s\r\n (context: %s)" good name msg truncated
                     startIndex <- index + 1
+            printfn "Parsed %d SELECT statements" good
+            total <- total + good
+        printfn "Parsed %d total SELECT statements" total
