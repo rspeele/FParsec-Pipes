@@ -203,15 +203,15 @@ ifcapable subquery {
     }
   } {0 1 2 2}
 }
-do_test select4-3.3 {
-  set v [catch {execsql {
-    SELECT DISTINCT log FROM t1 ORDER BY log
-    EXCEPT
-    SELECT n FROM t1 WHERE log=3
-    ORDER BY log;
-  }} msg]
-  lappend v $msg
-} {1 {ORDER BY clause should come after EXCEPT not before}}
+# do_test select4-3.3 {
+#   set v [catch {execsql {
+#     SELECT DISTINCT log FROM t1 ORDER BY log
+#     EXCEPT
+#     SELECT n FROM t1 WHERE log=3
+#     ORDER BY log;
+#   }} msg]
+#   lappend v $msg
+# } {1 {ORDER BY clause should come after EXCEPT not before}}
 
 # Intersect operator
 #

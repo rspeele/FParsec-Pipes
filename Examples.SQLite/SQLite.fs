@@ -380,8 +380,8 @@ let case expr =
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
 
-let private expr, exprImpl = createParserForwardedToRef<Expr, unit>()
-let private selectStmt, selectStmtImpl = createParserForwardedToRef<SelectStmt, unit>()
+let expr, private exprImpl = createParserForwardedToRef<Expr, unit>()
+let selectStmt, private selectStmtImpl = createParserForwardedToRef<SelectStmt, unit>()
 
 let tableInvocation =
     let args =

@@ -55,6 +55,7 @@ type Tests() =
 
     [<TestMethod>]
     member __.TestOnSelects() =
+        let parser = SQLiteParser.selectStmt .>> SQLiteParser.ws .>> %[';'; '}'; ')'; '"']
         let mutable total = 0
         for file in Directory.GetFiles("../../Tests", "*.test") do
             let mutable good = 0
@@ -71,9 +72,9 @@ type Tests() =
                     startIndex <- -1
                 else
                     let substr = text.Substring(index)
-                    match run SQLiteParser.stmts1 substr with
+                    match run parser substr with
                     | Success(result, _, _) ->
-                        good <- good + List.length result
+                        good <- good + 1
                     | Failure(msg, _, _) ->
                         let truncated = if substr.Length > 120 then substr.Substring(0, 120) else substr
                         failwithf "Failure (after %d successes). In %s:\r\n%s\r\n (context: %s)" good name msg truncated
