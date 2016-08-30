@@ -128,7 +128,7 @@ let isFollowingIdentifierCharacter c =
     || c >= '0' && c <= '9'
     || c = '$'
 
-/// A plain, unquoted name
+/// A plain, unquoted name.
 let unquotedName =
     let identifier =
         many1Satisfy2 isInitialIdentifierCharacter isFollowingIdentifierCharacter
@@ -154,6 +154,86 @@ let name =
 
 (**
 
+Since this is SQL we're dealing with, there are a bunch of special kinds of names.
+
+Table names can have an optional schema qualifier part, like `main.Users`.
+To avoid needless backtracking, we treat the second part as optional instead of the first for parsing purposes.
+
+*)
+
+let tableName =
+    (%% +.name
+    -- ws
+    -- +.(zeroOrOne * (%% '.' -- ws -? +.name -%> id))
+    -%> fun name name2 ->
+        match name2 with
+        | None -> { SchemaName = None; TableName = name }
+        | Some name2 -> { SchemaName = Some name; TableName = name2 })
+    <?> "table-name"
+
+(**
+
+Column names are similar -- they can be qualified with a table name, including its own optional schema qualifier.
+We could parse this as an optional table name followed by the column name. But this would require extra effort
+to ensure we parse "foo.bar" as (no schema, table foo, column bar), not (schema foo, table bar, no column).
+
+So instead, we just parse between 1 and 3 names separated by dots, then put together the whole structure
+based on how many we got.
+
+*)
+
+let columnName =
+    (qty.[1..3] / tws '.' * tws name
+    |>> fun names ->
+        match names.Count with
+        | 1 -> { Table = None; ColumnName = names.[0] }
+        | 2 -> { Table = Some { SchemaName = None; TableName = names.[0] }; ColumnName = names.[1] }
+        | 3 -> { Table = Some { SchemaName = Some names.[0]; TableName = names.[1] }; ColumnName = names.[2] }
+        | _ -> failwith "Unreachable")
+    <?> "column-name"
+
+(**
+
+Bind parameters in prepared statements can take [several forms](https://www.sqlite.org/lang_expr.html#varparam).
+
+We'll support all of them except the special Tcl syntax for `$` parameters.
+
+Named parameters are prefixed by `@`, `:`, or `$`.
+
+*)
+
+let namedBindParameter =
+    %% +.['@'; ':'; '$']
+    -- +.name
+    -%> fun prefix name -> NamedParameter (prefix, name)
+
+(**
+
+Positional parameters start with `?`, and may or may not contain an explicit integer parameter index.
+
+*)
+
+let positionalBindParameter =
+    %% '?'
+    -- +.(p<uint32> * zeroOrOne)
+    -%> PositionalParameter
+
+(*
+
+Either parameter type is allowed anywhere bind parameters can be used.
+
+*)
+
+let bindParameter =
+    %[ namedBindParameter; positionalBindParameter ]
+    <?> "bind-parameter"
+
+(**
+
+Next up, a fundamental building block of expressions: literal values like `1` and `'str'`.
+
+Some literals in SQL, such as `NULL`, are language keywords.
+
 When we look for a keyword, we need to ensure that we don't actually read part of another name.
 For example, if we're looking for CAST, we shouldn't match after reading the first four characters of
 CASTLE. Therefore, we require that keywords are not followed by other legal identifier characters.
@@ -165,7 +245,7 @@ let kw str =
 
 (**
 
-The simplest literals are those with only one representation.
+Keyword literals are very simple to define.
 
 *)
 
@@ -183,7 +263,7 @@ let currentTimestampLiteral =
 
 (**
 
-Next are string literals, which are very similar to quoted identifiers.
+Next are string literals, which are similar in implementation to quoted identifiers.
 
 *)
 
@@ -207,6 +287,9 @@ We will be strict about this definition, requiring that only hexadecimal data
 appear within the quotes of the literal, and that it contains an even number of
 characters since there should be two hex digits for each octet.
 
+Notice that we can still backtrack until parsing the first single quote.
+Otherwise we would get confused whenever we see a column name starting with "x".
+
 *)
 
 let blobLiteral =
@@ -222,7 +305,7 @@ let blobLiteral =
 
 (**
 
-We could liberally parse integer and float literals using pfloat and pint64.
+We could liberally parse integer and float literals using `pfloat` and `pint64`.
 
 However, to strictly match the rules laid out
 [here](https://www.sqlite.org/syntaxdiagrams.html#literal-value),
@@ -244,6 +327,17 @@ let numericLiteral =
         else 
             lit.String |> float |> FloatLiteral |> preturn
 
+(**
+
+Our core numeric literal parser intentionally leaves out leading signs (`-` and `+`).
+Most of the time, these are handled by the numeric literals appearing within expressions, in which
+those are valid prefix operators.
+
+However, sometimes numeric literals are accepted where general expressions are not. For these
+situations, we have a special parser for a numeric literal prefixed by an optional sign.
+
+*)
+
 let signedNumericLiteral =
     let sign =
         %[
@@ -258,7 +352,7 @@ let signedNumericLiteral =
 
 (**
 
-We then combine the literal definitions into one.
+In expressions, any kind of literal is OK.
 
 *)
 
@@ -273,6 +367,21 @@ let literal =
         currentTimestampLiteral
     ]
 
+(**
+
+Next we're going to parse expressions -- the kind of expressions that can appear in a "where" clause, for example.
+However, SQL expressions can be pretty complicated, so we have a lot of miscellaneous pieces to define
+before we can get to something recognizable.
+
+One of these pieces is the definition of a [type name](https://www.sqlite.org/syntax/type-name.html).
+These are most frequently seen in `CREATE TABLE` statements, but also appear in expressions of the form
+`CAST (expr as type-name)`.
+
+Since SQLite cares little about types and cares very much about compatibility, it is very liberal about type names.
+They can even have numeric bounds to look like types from other databases, even though SQLite ignores these completely.
+
+*)
+
 let typeBounds =
     %% '('
     -- ws
@@ -284,47 +393,47 @@ let typeBounds =
         | 2 -> { Low = bounds.[0]; High = Some bounds.[1] }
         | _ -> failwith "Unreachable"
 
+(**
+
+The name part of the type name can consist of multiple identifiers, for compatibility with standard SQL nonsense
+like `NATIONAL CHARACTER VARYING`.
+
+*)
+
 let typeName =
     (%% +.(qty.[1..] /. ws * name)
     -- +.(typeBounds * zeroOrOne)
     -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds })
     <?> "type-name"
-    
-let tableName =
-    (%% +.name
+
+(**
+
+The definition of the cast expression is relatively simple, but it relies on parsing an expression of
+any type. Since we don't have the general expression parser yet, let's just take it as a parameter.
+
+*)
+
+let cast expr =
+    %% kw "CAST"
     -- ws
-    -- +.(zeroOrOne * (%% '.' -- ws -? +.name -%> id))
-    -%> fun name name2 ->
-        match name2 with
-        | None -> { SchemaName = None; TableName = name }
-        | Some name2 -> { SchemaName = Some name; TableName = name2 })
-    <?> "table-name"
+    -- '('
+    -- ws
+    -- +.expr
+    -- kw "AS"
+    -- ws
+    -- +. typeName
+    -- ws
+    -- ')'
+    -%> fun ex typeName -> { Expression = ex; AsType = typeName }
 
-let columnName =
-    (qty.[1..3] / tws '.' * (name .>> ws)
-    |>> fun names ->
-        match names.Count with
-        | 1 -> { Table = None; ColumnName = names.[0] }
-        | 2 -> { Table = Some { SchemaName = None; TableName = names.[0] }; ColumnName = names.[1] }
-        | 3 -> { Table = Some { SchemaName = Some names.[0]; TableName = names.[1] }; ColumnName = names.[2] }
-        | _ -> failwith "Unreachable")
-    <?> "column-name"
+(**
 
-let indexName = name // TODO: can this have a schema name too?
+Function calls are another component of expressions. This includes aggregate functions,
+so we have to support weird stuff like `count(*)` or `count(distinct id, name)`.
 
-let namedBindParameter =
-    %% +.['@'; ':'; '$']
-    -- +.name
-    -%> fun prefix name -> NamedParameter (prefix, name)
+Once again, the expression parser is required to create this parser, so it's a parameter.
 
-let positionalBindParameter =
-    %% '?'
-    -- +.(p<uint32> * zeroOrOne)
-    -%> PositionalParameter
-
-let bindParameter =
-    %[ namedBindParameter; positionalBindParameter ]
-    <?> "bind-parameter"
+*)
 
 let functionArguments (expr : Parser<Expr, unit>) =
     %[
@@ -342,19 +451,6 @@ let functionInvocation expr =
     -- +.functionArguments expr
     -- ')'
     -%> fun name args -> { FunctionName = name; Arguments = args }
-
-let cast expr =
-    %% kw "CAST"
-    -- ws
-    -- '('
-    -- ws
-    -- +.expr
-    -- kw "AS"
-    -- ws
-    -- +. typeName
-    -- ws
-    -- ')'
-    -%> fun ex typeName -> { Expression = ex; AsType = typeName }
 
 let case expr =
     let whenClause =
@@ -577,7 +673,7 @@ let selectColumns =
 let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
     let indexHint =
         %[
-            %% kw "INDEXED" -- ws -- kw "BY" -- ws -- +.indexName -%> IndexedBy
+            %% kw "INDEXED" -- ws -- kw "BY" -- ws -- +.name -%> IndexedBy
             %% kw "NOT" -- ws -- kw "INDEXED" -%> NotIndexed
         ]
     let subterm =
