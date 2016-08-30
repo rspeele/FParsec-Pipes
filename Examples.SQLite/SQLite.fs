@@ -120,11 +120,13 @@ let sqlKeywords =
 
 let isInitialIdentifierCharacter c =
     c = '_'
-    || c = '$'
     || c >= 'a' && c <= 'z'
     || c >= 'A' && c <= 'Z'
+
 let isFollowingIdentifierCharacter c =
-    isInitialIdentifierCharacter c || c >= '0' && c <= '9'
+    isInitialIdentifierCharacter c
+    || c >= '0' && c <= '9'
+    || c = '$'
 
 /// A plain, unquoted name
 let unquotedName =
