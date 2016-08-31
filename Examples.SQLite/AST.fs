@@ -298,7 +298,7 @@ type ColumnConstraintType =
 type ColumnConstraint =
     {
         Name : Name option
-        ConstraintType : ColumnConstraintType
+        ColumnConstraintType : ColumnConstraintType
     }
 
 type ColumnDef =
@@ -316,4 +316,45 @@ type AlterTableStmt =
     {
         Table : TableName
         Alteration : AlterTableAlteration
+    }
+
+type TableIndexConstraintType =
+    | PrimaryKey
+    | Unique
+
+type TableIndexConstraintClause =
+    {
+        Type : TableIndexConstraintType
+        IndexedColumns : (Expr * OrderDirection) ResizeArray
+        ConflictClause : ConflictClause option
+    }
+
+type TableConstraintType =
+    | TableIndexConstraint of TableIndexConstraintClause
+    | TableForeignKeyConstraint of Name ResizeArray * ForeignKeyClause
+    | TableCheckConstraint of Expr
+
+type TableConstraint =
+    {
+        Name : Name option
+        TableConstraintType : TableConstraintType
+    }
+
+type CreateTableDefinition =
+    {
+        Columns : ColumnDef ResizeArray
+        Constraints : TableConstraint ResizeArray
+        WithoutRowId : bool
+    }
+
+type CreateTableAs =
+    | AsDefinition of CreateTableDefinition
+    | AsSelect of SelectStmt
+
+type CreateTableStmt =
+    {
+        Temporary : bool
+        IfNotExists : bool
+        Name : TableName
+        As : CreateTableAs
     }

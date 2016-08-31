@@ -963,7 +963,7 @@ let constraintType =
 let columnConstraint =
     %% +.(zeroOrOne * constraintName)
     -- +.constraintType
-    -%> fun name cty -> { Name = name; ConstraintType = cty }
+    -%> fun name cty -> { Name = name; ColumnConstraintType = cty }
 
 let columnDef =
     %% +.name
