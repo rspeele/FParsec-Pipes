@@ -483,7 +483,7 @@ let selectStmt, private selectStmtImpl = createParserForwardedToRef<SelectStmt, 
 
 let tableInvocation =
     let args =
-        %% '(' -- ws -- +.(qty.[0..] / tws ',' * expr) -- ')' -%> auto
+        %% '(' -- ws -- +.(qty.[0..] / tws ',' * expr) -- ')' -%> id
     %% +.tableName
     -- ws
     -- +.(args * zeroOrOne)
@@ -555,7 +555,7 @@ let term expr =
             expr
         ]
     %[
-        %% '(' -- ws -- +.parenthesized -- ')' -%> auto
+        %% '(' -- ws -- +.parenthesized -- ')' -%> id
         %% kw "EXISTS" -- ws -- '(' -- ws -- +.selectStmt -- ')' -%> ExistsExpr
         %% +.literal -%> LiteralExpr
         %% +.bindParameter -%> BindParameterExpr
@@ -803,13 +803,16 @@ let compoundExpr =
     -- +.(compoundNext * qty.[0..])
     -%> Seq.fold (|>)
 
+let orderDirection =
+    %[
+        %% kw "DESC" -%> Descending
+        %% kw "ASC" -%> Ascending
+        preturn Ascending
+    ]
+
 let orderingTerm =
     %% +.expr
-    -- +.[
-            %% kw "DESC" -%> Descending
-            %% kw "ASC" -%> Ascending
-            preturn Ascending
-        ]
+    -- +.orderDirection
     -- ws
     -%> fun expr dir -> { By = expr; Direction = dir }
 
@@ -848,6 +851,154 @@ do
                     Limit = limit
                 }
         )
+
+let conflictClause =
+    let onConflict =
+        %% kw "ON" -- ws -- kw "CONFLICT" -- ws -%> ()
+    let clause =
+        %% (onConflict * zeroOrOne)
+        -- +.[
+                %% kw "ROLLBACK" -%> Rollback
+                %% kw "ABORT" -%> Abort
+                %% kw "FAIL" -%> Fail
+                %% kw "IGNORE" -%> Ignore
+                %% kw "REPLACE" -%> Replace
+            ]
+        -- ws
+        -%> id
+    zeroOrOne * clause
+
+let foreignKeyRule =
+    let eventRule =
+        %% kw "ON"
+        -- ws
+        -- +.[
+                %% kw "DELETE" -%> OnDelete
+                %% kw "UPDATE" -%> OnUpdate
+            ]
+        -- ws
+        -- +.[
+                %% kw "SET" -- ws -- +.[ %% kw "NULL" -%> SetNull; %% kw "DEFAULT" -%> SetDefault ] -%> id
+                %% kw "CASCADE" -%> Cascade
+                %% kw "RESTRICT" -%> Restrict
+                %% kw "NO" --ws -- kw "ACTION" -%> NoAction
+            ]
+        -- ws
+        -%> fun evt handler -> EventRule (evt, handler)
+    let matchRule =
+        %% kw "MATCH"
+        -- ws
+        -- +.name
+        -- ws
+        -%> MatchRule
+    %[ eventRule; matchRule ]
+
+
+let foreignKeyDeferClause =
+    let initially =
+        %% kw "INITIALLY" -- ws -- +.[ %% kw "DEFERRED" -%> true; %% kw "IMMEDIATE" -%> false ] -- ws -%> id
+    %% +.(zeroOrOne * tws (kw "NOT"))
+    -? kw "DEFERRABLE"
+    -- ws
+    -- +.(zeroOrOne * initially)
+    -%> fun not init -> { Deferrable = Option.isNone not; InitiallyDeferred = init }
+
+let foreignKeyClause =
+    let columns =
+        %% '(' -- ws -- +.(qty.[1..] / tws ',' * tws name) -- ')' -- ws -%> id
+    %% kw "REFERENCES"
+    -- ws
+    -- +.tableName
+    -- +.(zeroOrOne * columns)
+    -- +.(qty.[0..] * foreignKeyRule)
+    -- +.(zeroOrOne * foreignKeyDeferClause)
+    -%> fun table cols rules defer ->
+        {
+            ReferencesTable = table
+            ReferencesColumns = cols
+            Rules = rules
+            Defer = defer
+        }
+
+let constraintName =
+    %% kw "CONSTRAINT"
+    -- ws
+    -- +.name
+    -- ws
+    -%> id
+
+let primaryKeyClause =
+    %% kw "PRIMARY"
+    -- ws
+    -- kw "KEY"
+    -- ws
+    -- +.orderDirection
+    -- ws
+    -- +.conflictClause
+    -- +.(zeroOrOne * tws (kw "AUTOINCREMENT"))
+    -%> fun dir conflict auto ->
+        {
+            Order = dir
+            ConflictClause = conflict
+            AutoIncrement = Option.isSome auto
+        }
+
+let constraintType =
+    let defaultValue =
+        %[
+            %% +.signedNumericLiteral -%> fun lit -> lit.ToNumericLiteral() |> NumericLiteral |> LiteralExpr
+            %% +.literal -%> LiteralExpr
+            %% '(' -- ws -- +.expr -- ')' -%> id
+        ]
+    %[
+        %% +.primaryKeyClause -%> PrimaryKeyConstraint
+        %% kw "NOT" -- ws -- kw "NULL" -- ws -- +.conflictClause -%> NotNullConstraint
+        %% kw "UNIQUE" -- ws -- +.conflictClause -%> UniqueConstraint
+        %% kw "CHECK" -- ws -- '(' -- ws -- +.expr -- ')' -%> CheckConstraint
+        %% kw "DEFAULT" -- ws -- +.defaultValue -%> DefaultConstraint
+        %% kw "COLLATE" -- ws -- +.name -%> CollateConstraint
+        %% +.foreignKeyClause -%> ForeignKeyConstraint
+    ]
+
+let columnConstraint =
+    %% +.(zeroOrOne * constraintName)
+    -- +.constraintType
+    -%> fun name cty -> { Name = name; ConstraintType = cty }
+
+let columnDef =
+    %% +.name
+    -- ws
+    -- +.(typeName * zeroOrOne)
+    -- +.(columnConstraint * qty.[0..])
+    -%> fun name typeName constraints ->
+        {
+            Name = name
+            Type = typeName
+            Constraints = constraints
+        }
+
+let alterTableStmt =
+    let renameTo =  
+        %% kw "RENAME"
+        -- ws
+        -- kw "TO"
+        -- ws
+        -- +.name
+        -%> RenameTo
+    let addColumn =
+        %% kw "ADD"
+        -- ws
+        -- tws (kw "COLUMN") * zeroOrOne
+        -- +.columnDef
+        -%> AddColumn
+    %% kw "ALTER"
+    -- ws
+    -- kw "TABLE"
+    -- ws
+    -- +.tableName
+    -- +.[ renameTo; addColumn ]
+    -%> fun table alteration -> { Table = table; Alteration = alteration }
+        
 
 let private stmtsAtLeast min =
     %% ws

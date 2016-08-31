@@ -12,6 +12,12 @@ type SignedNumericLiteral =
         Sign : int // -1, 0, 1
         Value : NumericLiteral
     }
+    member this.ToNumericLiteral() =
+        if this.Sign < 0 then
+            match this.Value with
+            | IntegerLiteral i -> IntegerLiteral (-i)
+            | FloatLiteral f -> FloatLiteral (-f)
+        else this.Value
 
 type Literal =
     | NullLiteral
@@ -235,4 +241,79 @@ and CommonTableExpression =
         Recursive : bool
         ColumnNames : ColumnName ResizeArray option
         AsSelect : SelectStmt
+    }
+
+type ConflictClause =
+    | Rollback
+    | Abort
+    | Fail
+    | Ignore
+    | Replace
+
+type ForeignKeyEvent =
+    | OnDelete
+    | OnUpdate
+
+type ForeignKeyEventHandler =
+    | SetNull
+    | SetDefault
+    | Cascade
+    | Restrict
+    | NoAction
+
+type ForeignKeyRule =
+    | MatchRule of Name
+    | EventRule of (ForeignKeyEvent * ForeignKeyEventHandler)
+
+type ForeignKeyDeferClause =
+    {
+        Deferrable : bool
+        InitiallyDeferred : bool option
+    }
+
+type ForeignKeyClause =
+    {
+        ReferencesTable : TableName
+        ReferencesColumns : Name ResizeArray option
+        Rules : ForeignKeyRule ResizeArray
+        Defer : ForeignKeyDeferClause option
+    }
+
+type PrimaryKeyClause =
+    {
+        Order : OrderDirection
+        ConflictClause : ConflictClause option
+        AutoIncrement : bool
+    }
+
+type ColumnConstraintType =
+    | PrimaryKeyConstraint of PrimaryKeyClause
+    | NotNullConstraint of ConflictClause option
+    | UniqueConstraint of ConflictClause option
+    | CheckConstraint of Expr
+    | DefaultConstraint of Expr
+    | CollateConstraint of Name
+    | ForeignKeyConstraint of ForeignKeyClause
+
+type ColumnConstraint =
+    {
+        Name : Name option
+        ConstraintType : ColumnConstraintType
+    }
+
+type ColumnDef =
+    {
+        Name : Name
+        Type : TypeName option
+        Constraints : ColumnConstraint ResizeArray
+    }
+
+type AlterTableAlteration =
+    | RenameTo of Name
+    | AddColumn of ColumnDef
+
+type AlterTableStmt =
+    {
+        Table : TableName
+        Alteration : AlterTableAlteration
     }

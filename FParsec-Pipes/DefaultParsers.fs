@@ -38,10 +38,10 @@ let pcharCI c : Parser<char, 'u> =
 
 /// Represents a parser whose output is ignored within a pipeline.
 type Ignore<'a, 'u> =
-    | Ignore of Parser<'a, 'u>
-    static member (---) (pipe, Ignore (p : Parser<'a, 'u>)) = appendIgnore pipe p
-    static member (?--) (pipe, Ignore (p : Parser<'a, 'u>)) = appendIgnoreBacktrackLeft pipe p
-    static member (--?) (pipe, Ignore (p : Parser<'a, 'u>)) = appendIgnoreBacktrackRight pipe p
+    | IgnoreParser of Parser<'a, 'u>
+    static member (---) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnore pipe p
+    static member (?--) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackLeft pipe p
+    static member (--?) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackRight pipe p
 
 /// Reprsents a parser whose output is captured within a pipeline.
 type Capture<'a, 'u> =
@@ -56,42 +56,42 @@ type DefaultParserOf<'a>() =
 and [<AllowNullLiteral>]
     CustomDefaultParserOf< ^a when ^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >) >() =
         static member inline (%!!~~%) (DefaultParser, _ : CustomDefaultParserOf< ^a >) =
-            (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)()) |> Ignore
+            (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)()) |> IgnoreParser
 and DefaultParser =
     | DefaultParser
     static member inline (%!!~~%) (DefaultParser, cap : Capture<'a, 'u>) = cap
 
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing |> Ignore
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u> seq) = choice existing |> Ignore
+    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u> seq) = choice existing |> IgnoreParser
 
-    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal |> Ignore
-    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal |> Ignore
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> Ignore
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> Ignore
-    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate |> Ignore
+    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate |> IgnoreParser
 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : char list) =
-        anyOf anyOfThese |> Ignore
+        anyOf anyOfThese |> IgnoreParser
     static member inline (%!!~~%) (DefaultParser, anyOfThese : string list) =
-        choice (List.map pstring anyOfThese) |> Ignore
+        choice (List.map pstring anyOfThese) |> IgnoreParser
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<char> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) |> Ignore
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) |> IgnoreParser
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<string> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) |> Ignore
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) |> IgnoreParser
 
-    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser |> Ignore
+    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser |> IgnoreParser
 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 |> Ignore
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition |> Ignore
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition |> IgnoreParser
 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^a >) =
         DefaultParser %!!~~% (null : CustomDefaultParserOf< ^a >)
@@ -105,7 +105,7 @@ let p<'a> = DefaultParserOf<'a>.Instance
 /// Create a parser from `x`, if there is a single sensible parser possible.
 /// For example, `defaultParser "str"` is equivalent to `pstring str`.
 let inline defaultParser x =
-    let (Ignore parser) = DefaultParser %!!~~% x
+    let (IgnoreParser parser) = DefaultParser %!!~~% x
     parser
 
 /// Converts its argument to a parser via `defaultParser` and
