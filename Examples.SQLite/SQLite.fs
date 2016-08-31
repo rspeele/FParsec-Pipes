@@ -963,6 +963,7 @@ let constraintType =
 let columnConstraint =
     %% +.(zeroOrOne * constraintName)
     -- +.constraintType
+    -- ws
     -%> fun name cty -> { Name = name; ColumnConstraintType = cty }
 
 let columnDef =
@@ -998,7 +999,85 @@ let alterTableStmt =
     -- +.tableName
     -- +.[ renameTo; addColumn ]
     -%> fun table alteration -> { Table = table; Alteration = alteration }
+
+let tableIndexConstraintType =
+    %[
+        %% kw "PRIMARY" -- ws -- kw "KEY" -%> PrimaryKey
+        %% kw "UNIQUE" -%> Unique
+    ]
+let tableIndexConstraint =
+    %% +.tableIndexConstraintType
+    -- ws
+    -- '('
+    -- ws
+    -- +.(qty.[1..] / tws ',' * (%% +.expr -- +.orderDirection -%> auto))
+    -- ')'
+    -- ws
+    -- +.conflictClause
+    -%> fun cty cols conflict ->
+        { Type = cty; IndexedColumns = cols; ConflictClause = conflict }
+
+let tableConstraintType =
+    let foreignKey =
+        %% kw "FOREIGN"
+        -- ws
+        -- kw "KEY"
+        -- '('
+        -- ws
+        -- +.(qty.[1..] / tws ',' * tws name)
+        -- ')'
+        -- ws
+        -- +.foreignKeyClause
+        -%> fun columns fk -> TableForeignKeyConstraint (columns, fk)
+    %[
+        %% kw "CHECK" -- ws -- '(' -- ws -- +.expr -- ')' -%> TableCheckConstraint
+        foreignKey
+        %% +.tableIndexConstraint -%> TableIndexConstraint
+    ]
+
+let tableConstraint =
+    %% +.(zeroOrOne * constraintName)
+    -- +.tableConstraintType
+    -- ws
+    -%> fun name cty -> { Name = name; TableConstraintType = cty }
+
+let createTableDefinition =
+    %% '('
+    -- ws
+    -- +.(qty.[0..] / tws ',' * columnDef)
+    -- +.(qty.[0..] / tws ',' * tableConstraint)
+    -- ')'
+    -- ws
+    -- +.(zeroOrOne * (%% kw "WITHOUT" -- ws -- kw "ROWID" -- ws -%> ()))
+    -%> fun columns constraints without ->
+        {
+            Columns = columns
+            Constraints = constraints
+            WithoutRowId = Option.isSome without
+        }
+
+let createTableAs =
+    %[
+        %% kw "AS" -- ws -- +.selectStmt -%> CreateAsSelect
+        %% +.createTableDefinition -%> CreateAsDefinition
+    ]
         
+let createTableStmt =
+    %% kw "CREATE"
+    -- ws
+    -- +.(zeroOrOne * tws %[kw "TEMPORARY"; kw "TEMP"])
+    -- kw "TABLE"
+    -- ws
+    -- +.(zeroOrOne * (%% kw "IF" -- ws -- kw "NOT" -- ws -- kw "EXISTS" -- ws -%> ()))
+    -- +.tableName
+    -- +.createTableAs
+    -%> fun temp ifNotExists name createAs ->
+        {
+            Temporary = Option.isSome temp
+            IfNotExists = Option.isSome ifNotExists
+            Name = name
+            As = createAs
+        }
 
 let private stmtsAtLeast min =
     %% ws

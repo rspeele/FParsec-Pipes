@@ -348,8 +348,8 @@ type CreateTableDefinition =
     }
 
 type CreateTableAs =
-    | AsDefinition of CreateTableDefinition
-    | AsSelect of SelectStmt
+    | CreateAsDefinition of CreateTableDefinition
+    | CreateAsSelect of SelectStmt
 
 type CreateTableStmt =
     {
