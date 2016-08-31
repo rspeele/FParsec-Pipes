@@ -625,6 +625,7 @@ do
             Operators = operators    
         } |> Precedence.expression
 
+// TODO: support multiple CTE definitions per WITH clause
 let commonTableExpression =
     let columnNames =
         %% '('
