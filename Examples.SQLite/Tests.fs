@@ -54,6 +54,25 @@ type Tests() =
         "
 
     [<TestMethod>]
+    member __.TestCreate() =
+        test @"
+            create table main.x 
+            ( id int not null primary key
+            , name clob
+            , friendid id references main.y(id)
+            ) 
+        "
+
+    [<TestMethod>]
+    member __.TestCreateTemp() =
+        test @"
+            create temp table x as
+            select a, b, c from main.realtable
+            where a > 5
+            limit 1
+        "
+
+    [<TestMethod>]
     member __.TestOnSelects() =
         let parser = SQLiteParser.selectStmt .>> SQLiteParser.ws .>> %[';'; '}'; ')'; '"']
         let mutable total = 0

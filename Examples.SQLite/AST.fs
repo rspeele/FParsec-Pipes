@@ -358,3 +358,8 @@ type CreateTableStmt =
         Name : TableName
         As : CreateTableAs
     }
+
+type Stmt =
+    | CreateTableStmt of CreateTableStmt
+    | AlterTableStmt of AlterTableStmt
+    | SelectStmt of SelectStmt

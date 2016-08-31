@@ -164,7 +164,7 @@ To avoid needless backtracking, we treat the second part as optional instead of 
 let tableName =
     (%% +.name
     -- ws
-    -- +.(zeroOrOne * (%% '.' -- ws -? +.name -%> id))
+    -- +.(zeroOrOne * (%% '.' -- ws -? +.name -- ws -%> id))
     -%> fun name name2 ->
         match name2 with
         | None -> { SchemaName = None; TableName = name }
@@ -385,7 +385,7 @@ They can even have numeric bounds to look like types from other databases, even 
 let typeBounds =
     %% '('
     -- ws
-    -- +.(qty.[1..2] / tws ',' * (signedNumericLiteral .>> ws))
+    -- +.(qty.[1..2] / tws ',' * tws signedNumericLiteral)
     -- ')'
     -%> fun bounds ->
         match bounds.Count with
@@ -629,12 +629,12 @@ let commonTableExpression =
     let columnNames =
         %% '('
         -- ws
-        -- +.(qty.[0..] / tws ',' * (columnName .>> ws))
+        -- +.(qty.[0..] / tws ',' * columnName)
         -- ')'
         -%> id
     %% kw "WITH"
     -- ws
-    -- +.((kw "RECURSIVE" .>> ws) * zeroOrOne)
+    -- +.(tws (kw "RECURSIVE") * zeroOrOne)
     -- +.tableName
     -- ws
     -- +.(columnNames * zeroOrOne)
@@ -648,7 +648,7 @@ let commonTableExpression =
         { Name = cteName; Recursive = Option.isSome recurs; ColumnNames = columnNames; AsSelect = asSelect }
 
 let asAlias =
-    %% ((kw "AS" .>> ws) * zeroOrOne)
+    %% (tws (kw "AS") * zeroOrOne)
     -? +.[ name; stringLiteral ]
     -%> id
 
@@ -689,7 +689,7 @@ let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
 
 let joinType =
     %[
-        %% kw "LEFT" -- ws -- ((kw "OUTER" .>> ws) * zeroOrOne) -%> LeftOuter
+        %% kw "LEFT" -- ws -- (tws (kw "OUTER") * zeroOrOne) -%> LeftOuter
         %% kw "INNER" -- ws -%> Inner
         %% kw "CROSS" -- ws -%> Cross
         %% ws -%> Inner
@@ -698,7 +698,7 @@ let joinType =
 let joinConstraint =
     %[
         %% kw "ON" -- ws -- +.expr -- ws -%> JoinOn
-        %% kw "USING" -- ws -- '(' -- ws -- +.(qty.[1..] / tws ',' * (columnName .>> ws)) -- ')' -- ws
+        %% kw "USING" -- ws -- '(' -- ws -- +.(qty.[1..] / tws ',' * columnName) -- ')' -- ws
             -%> fun cols -> JoinUsing (List.ofSeq cols)
         preturn JoinUnconstrained
     ]
@@ -1079,9 +1079,16 @@ let createTableStmt =
             As = createAs
         }
 
+let private anyStmt =
+    %[
+        %% +.selectStmt -%> SelectStmt
+        %% +.createTableStmt -%> CreateTableStmt
+        %% +.alterTableStmt -%> AlterTableStmt
+    ]
+
 let private stmtsAtLeast min =
     %% ws
-    -- +.(qty.[min..] /. tws ';' * selectStmt)
+    -- +.(qty.[min..] /. tws ';' * anyStmt)
     -%> List.ofSeq
 
 let stmts = stmtsAtLeast 0
