@@ -625,7 +625,6 @@ do
             Operators = operators    
         } |> Precedence.expression
 
-// TODO: support multiple CTE definitions per WITH clause
 let commonTableExpression =
     let columnNames =
         %% '('
@@ -633,10 +632,7 @@ let commonTableExpression =
         -- +.(qty.[0..] / tws ',' * columnName)
         -- ')'
         -%> id
-    %% kw "WITH"
-    -- ws
-    -- +.(tws (kw "RECURSIVE") * zeroOrOne)
-    -- +.tableName
+    %% +.tableName
     -- ws
     -- +.(columnNames * zeroOrOne)
     -- kw "AS"
@@ -645,8 +641,16 @@ let commonTableExpression =
     -- +.selectStmt
     -- ')'
     -- ws
-    -%> fun recurs cteName columnNames asSelect ->
-        { Name = cteName; Recursive = Option.isSome recurs; ColumnNames = columnNames; AsSelect = asSelect }
+    -%> fun table cols asSelect ->
+        { Name = table; ColumnNames = cols; AsSelect = asSelect }
+
+let withClause =
+    %% kw "WITH"
+    -- ws
+    -- +.(zeroOrOne * tws (kw "RECURSIVE"))
+    -- +.(qty.[1..] / tws ',' * commonTableExpression)
+    -%> fun recurs ctes ->
+        { Recursive = Option.isSome recurs; Tables = ctes }
 
 let asAlias =
     %% (tws (kw "AS") * zeroOrOne)
@@ -840,7 +844,7 @@ let limit =
 do
     selectStmtImpl :=
         (
-            %% +.(zeroOrOne * commonTableExpression)
+            %% +.(zeroOrOne * withClause)
             -- +.compoundExpr
             -- +.(zeroOrOne * orderBy)
             -- +.(zeroOrOne * limit)

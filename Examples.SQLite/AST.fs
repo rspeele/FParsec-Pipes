@@ -153,10 +153,23 @@ and InSet =
 
 and SelectStmt =
     {
-        With : CommonTableExpression option
+        With : WithClause option
         Compound : CompoundExpr
         OrderBy : OrderingTerm ResizeArray option
         Limit : Limit option
+    }
+
+and WithClause =
+    {
+        Recursive : bool
+        Tables : CommonTableExpression ResizeArray
+    }
+
+and CommonTableExpression =
+    {
+        Name : TableName
+        ColumnNames : ColumnName ResizeArray option
+        AsSelect : SelectStmt
     }
 
 and OrderDirection =
@@ -234,14 +247,6 @@ and TableExpr =
     | TableOrSubquery of TableOrSubquery
     | AliasedTableExpr of TableExpr * Alias
     | Join of JoinType *  TableExpr * TableExpr * JoinConstraint
-
-and CommonTableExpression =
-    {
-        Name : TableName
-        Recursive : bool
-        ColumnNames : ColumnName ResizeArray option
-        AsSelect : SelectStmt
-    }
 
 type ConflictClause =
     | Rollback
