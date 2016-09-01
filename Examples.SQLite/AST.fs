@@ -364,7 +364,20 @@ type CreateTableStmt =
         As : CreateTableAs
     }
 
+type TransactionType =
+    | Deferred
+    | Immediate
+    | Exclusive
+
+type SavepointName = Name
+
 type Stmt =
-    | CreateTableStmt of CreateTableStmt
     | AlterTableStmt of AlterTableStmt
+    | AnalyzeStmt of TableName
+    | AttachStmt of Expr * Name
+    | BeginStmt of TransactionType
+    | CommitStmt
+    | CreateTableStmt of CreateTableStmt
+    | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
+    | ExplainStmt of Stmt
