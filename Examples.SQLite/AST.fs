@@ -4,7 +4,7 @@ open System.Collections.Generic
 open System.Globalization
 
 type NumericLiteral =
-    | IntegerLiteral of int64
+    | IntegerLiteral of uint64
     | FloatLiteral of float
 
 type SignedNumericLiteral =
@@ -12,12 +12,6 @@ type SignedNumericLiteral =
         Sign : int // -1, 0, 1
         Value : NumericLiteral
     }
-    member this.ToNumericLiteral() =
-        if this.Sign < 0 then
-            match this.Value with
-            | IntegerLiteral i -> IntegerLiteral (-i)
-            | FloatLiteral f -> FloatLiteral (-f)
-        else this.Value
 
 type Literal =
     | NullLiteral
@@ -481,7 +475,6 @@ type DropObjectStmt =
     }
 
 type PragmaValue =
-    | NamePragmaValue of Name
     | StringPragmaValue of string
     | NumericPragmaValue of SignedNumericLiteral
 
@@ -491,9 +484,14 @@ type PragmaStmt =
         Value : PragmaValue option
     }
 
+type RollbackStmt =
+    | RollbackToSavepoint of SavepointName
+    | RollbackTransactionByName of Name
+    | RollbackTransaction
+
 type Stmt =
     | AlterTableStmt of AlterTableStmt
-    | AnalyzeStmt of ObjectName
+    | AnalyzeStmt of ObjectName option
     | AttachStmt of Expr * Name
     | BeginStmt of TransactionType
     | CommitStmt
@@ -508,7 +506,7 @@ type Stmt =
     | PragmaStmt of PragmaStmt
     | ReindexStmt of ObjectName option
     | ReleaseStmt of Name
-    | RollbackStmt of SavepointName option
+    | RollbackStmt of RollbackStmt
     | SavepointStmt of SavepointName
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt

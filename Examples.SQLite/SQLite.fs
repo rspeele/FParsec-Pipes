@@ -95,7 +95,7 @@ For unquoted names, we should ensure that a reserved keyword is not used.
 let sqlKeywords =
     [
         "ABORT"; "ACTION"; "ADD"; "AFTER"; "ALL"; "ALTER"; "ANALYZE";
-        "AND"; "AS"; "ASC"; "ATTACH"; "AUTOINCREMENT"; "BEFORE"; "BEGIN";
+        "AND"; "AS"; "ASC"; "ATTACH"; "BEFORE"; "BEGIN";
         "BETWEEN"; "BY"; "CASCADE"; "CASE"; "CAST"; "CHECK"; "COLLATE";
         "COLUMN"; "COMMIT"; "CONFLICT"; "CONSTRAINT"; "CREATE"; "CROSS";
         "CURRENT_DATE"; "CURRENT_TIME"; "CURRENT_TIMESTAMP"; "DATABASE";
@@ -104,7 +104,7 @@ let sqlKeywords =
         "EXCLUSIVE"; "EXISTS"; "EXPLAIN"; "FAIL"; "FOR"; "FOREIGN"; "FROM";
         "FULL"; "GLOB"; "GROUP"; "HAVING"; "IF"; "IGNORE"; "IMMEDIATE"; "IN";
         "INDEX"; "INDEXED"; "INITIALLY"; "INNER"; "INSERT"; "INSTEAD";
-        "INTERSECT"; "INTO"; "IS"; "ISNULL"; "JOIN"; "KEY"; "LEFT"; "LIKE";
+        "INTERSECT"; "INTO"; "IS"; "ISNULL"; "JOIN"; "KEY"; "LEFT";
         "LIMIT"; "MATCH"; "NATURAL"; "NO"; "NOT"; "NOTNULL"; "NULL"; "OF";
         "OFFSET"; "ON"; "OR"; "ORDER"; "OUTER"; "PLAN"; "PRAGMA"; "PRIMARY";
         "QUERY"; "RAISE"; "RECURSIVE"; "REFERENCES"; "REGEXP"; "REINDEX";
@@ -153,12 +153,34 @@ let name =
         unquotedName
     ]
 
+(**
+
+Next are string literals, which are similar in implementation to quoted identifiers.
+
+*)
+
+let stringLiteral =
+   (let escapedQuote =
+        %% "''" -%> "'" // A pair of single quotes escapes a single quote character
+    let regularChars =
+        many1Satisfy ((<>) '\'') // Any run of non-quote characters is literal
+    %% '\'' -- +.([regularChars; escapedQuote] * qty.[0..]) -- '\''
+    -%> String.Concat)
+    <?> "string-literal"
+
+let nameOrString =
+    %[
+        name
+        stringLiteral
+    ]
+
 let nameOrKeyword =
     %[
         quotedName
         bracketedName
         backtickedName
         unquotedNameOrKeyword
+        stringLiteral
     ]
 
 (**
@@ -171,9 +193,9 @@ To avoid needless backtracking, we treat the second part as optional instead of 
 *)
 
 let objectName =
-    (%% +.name
+    (%% +.nameOrString
     -- ws
-    -- +.(zeroOrOne * (%% '.' -- ws -? +.name -- ws -%> id))
+    -- +.(zeroOrOne * (%% '.' -- ws -? +.nameOrString -- ws -%> id))
     -%> fun name name2 ->
         match name2 with
         | None -> { SchemaName = None; ObjectName = name }
@@ -275,21 +297,6 @@ let currentTimestampLiteral =
 
 (**
 
-Next are string literals, which are similar in implementation to quoted identifiers.
-
-*)
-
-let stringLiteral =
-   (let escapedQuote =
-        %% "''" -%> "'" // A pair of single quotes escapes a single quote character
-    let regularChars =
-        many1Satisfy ((<>) '\'') // Any run of non-quote characters is literal
-    %% '\'' -- +.([regularChars; escapedQuote] * qty.[0..]) -- '\''
-    -%> String.Concat)
-    <?> "string-literal"
-
-(**
-
 Blob literals are described [here](https://www.sqlite.org/lang_expr.html):
 
 > BLOB literals are string literals containing hexadecimal data and preceded
@@ -333,7 +340,7 @@ let numericLiteral =
         ||| NumberLiteralOptions.AllowExponent
     numberLiteral options "numeric-literal" >>= fun lit ->
         if lit.IsInteger then
-            lit.String |> int64 |> IntegerLiteral |> preturn
+            lit.String |> uint64 |> IntegerLiteral |> preturn
         else if lit.IsHexadecimal then
             fail "hexadecimal floats are not permitted"
         else 
@@ -737,12 +744,14 @@ let tableExpr =
 let valuesClause =
     let valuesRow =
         %% '('
+        -- ws
         -- +.(qty.[0..] / tws ',' * expr)
         -- ')'
         -- ws
         -%> id
 
     %% kw "VALUES"
+    -- ws
     -- +.(qty.[1..] / tws ',' * valuesRow)
     -- ws
     -%> id
@@ -930,9 +939,13 @@ let primaryKeyClause =
         }
 
 let constraintType =
+    let signedToExpr (signed : SignedNumericLiteral) =
+        let expr = signed.Value |> NumericLiteral |> LiteralExpr
+        if signed.Sign < 0 then UnaryExpr (Negative, expr)
+        else expr
     let defaultValue =
         %[
-            %% +.signedNumericLiteral -%> fun lit -> lit.ToNumericLiteral() |> NumericLiteral |> LiteralExpr
+            %% +.signedNumericLiteral -%> signedToExpr
             %% +.literal -%> LiteralExpr
             %% '(' -- ws -- +.expr -- ')' -%> id
         ]
@@ -1024,7 +1037,7 @@ let tableConstraint =
 let createTableDefinition =
     %% '('
     -- ws
-    -- +.(qty.[0..] / tws ',' * columnDef)
+    -- +.(qty.[0..] /. tws ',' * columnDef)
     -- +.(qty.[0..] / tws ',' * tableConstraint)
     -- ')'
     -- ws
@@ -1063,7 +1076,7 @@ let createTableStmt =
 
 let analyzeStmt =
     %% kw "ANALYZE"
-    -- +.objectName
+    -- +.(zeroOrOne * objectName)
     -%> id
 
 let attachStmt =
@@ -1071,7 +1084,7 @@ let attachStmt =
     -- zeroOrOne * kw "DATABASE"
     -- +.expr
     -- kw "AS"
-    -- +.name
+    -- +.nameOrKeyword
     -%> fun ex schemaName -> ex, schemaName
 
 let transactionType =
@@ -1086,6 +1099,7 @@ let beginStmt =
     %% kw "BEGIN"
     -- +.transactionType
     -- zeroOrOne * kw "TRANSACTION"
+    -- zeroOrOne * nameOrString // optional ignored name
     -%> BeginStmt
 
 let commitStmt =
@@ -1098,10 +1112,16 @@ let rollbackStmt =
         %% kw "TO"
         -- zeroOrOne * kw "SAVEPOINT"
         -- +.name
-        -%> id
+        -%> RollbackToSavepoint
+    let tx =
+        %% +.nameOrString -%> RollbackTransactionByName
     %% kw "ROLLBACK"
     -- zeroOrOne * kw "TRANSACTION"
-    -- +.(zeroOrOne * toPoint)
+    -- +.[
+            toPoint
+            tx
+            preturn RollbackTransaction
+        ]
     -%> RollbackStmt
 
 let createIndexStmt =
@@ -1301,7 +1321,7 @@ let createViewStmt =
 let detachStmt =
     %% kw "DETACH"
     -- zeroOrOne * kw "DATABASE"
-    -- +.name
+    -- +.nameOrKeyword
     -%> DetachStmt
 
 let ifExists =
@@ -1329,8 +1349,7 @@ let dropObjectStmt =
 let pragmaValue =
     let interiorValue =
         %[
-            %% +.nameOrKeyword -%> NamePragmaValue
-            %% +.stringLiteral -%> StringPragmaValue
+            %% +.nameOrKeyword -%> StringPragmaValue
             %% +.signedNumericLiteral -%> NumericPragmaValue
         ]
     %[
