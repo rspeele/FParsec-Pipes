@@ -396,7 +396,23 @@ type DeleteStmt =
         Limit : Limit option
     }
 
-type UpdateStmt = UpdateStmtPlaceholder
+type UpdateOr =
+    | UpdateOrRollback
+    | UpdateOrAbort
+    | UpdateOrReplace
+    | UpdateOrFail
+    | UpdateOrIgnore
+
+type UpdateStmt =
+    {
+        With : WithClause option
+        UpdateTable : QualifiedTableName
+        Or : UpdateOr option
+        Set : (Name * Expr) ResizeArray
+        Where : Expr option
+        OrderBy : OrderingTerm ResizeArray option
+        Limit : Limit option
+    }
 type InsertStmt = InsertStmtPlaceholder
 
 type TriggerSchedule =
@@ -440,3 +456,4 @@ type Stmt =
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt
+    | UpdateStmt of UpdateStmt

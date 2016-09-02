@@ -742,7 +742,6 @@ let fromClause =
 let whereClause =
     %% kw "WHERE"
     -- +.expr
-    -- ws
     -%> id
 
 let havingClause =
@@ -1127,19 +1126,56 @@ let qualifiedTableName =
         }
 
 let deleteStmt =
-    let deleteWhereClause =
-        %% kw "WHERE" -- +.expr -%> id
     %% +.(zeroOrOne * withClause)
     -? kw "DELETE"
     -- kw "FROM"
     -- +.qualifiedTableName
-    -- +.(zeroOrOne * deleteWhereClause)
+    -- +.(zeroOrOne * whereClause)
     -- +.(zeroOrOne * orderBy)
     -- +.(zeroOrOne * limit)
     -%> fun withClause fromTable where orderBy limit ->
         {
             With = withClause
             DeleteFrom = fromTable
+            Where = where
+            OrderBy = orderBy
+            Limit = limit
+        }
+
+let updateOr =
+    %% kw "OR"
+    -- +.[
+            %% kw "ROLLBACK" -%> UpdateOrRollback
+            %% kw "ABORT" -%> UpdateOrAbort
+            %% kw "REPLACE" -%> UpdateOrReplace
+            %% kw "FAIL" -%> UpdateOrFail
+            %% kw "IGNORE" -%> UpdateOrIgnore
+        ]
+    -%> id
+
+let updateStmt =
+    let setColumn =
+        %% +.name
+        -- ws
+        -- '='
+        -- ws
+        -- +.expr
+        -%> fun name expr -> name, expr
+    %% +.(zeroOrOne * withClause)
+    -? kw "UPDATE"
+    -- +.(zeroOrOne * updateOr)
+    -- +.qualifiedTableName
+    -- kw "SET"
+    -- +.(qty.[1..] / tws ',' * setColumn)
+    -- +.(zeroOrOne * whereClause)
+    -- +.(zeroOrOne * orderBy)
+    -- +.(zeroOrOne * limit)
+    -%> fun withClause updateOr table sets where orderBy limit ->
+        {
+            With = withClause
+            UpdateTable = table
+            Or = updateOr
+            Set = sets
             Where = where
             OrderBy = orderBy
             Limit = limit
@@ -1166,7 +1202,8 @@ let triggerAction =
     %[
         %% +.selectStmt -%> TriggerSelect
         %% +.deleteStmt -%> TriggerDelete
-        // TODO: update/insert statements
+        %% +.updateStmt -%> TriggerUpdate
+        // TODO: insert statements
     ]
 
 let createTriggerStmt =
@@ -1212,6 +1249,7 @@ let private almostAnyStmt =
         %% +.deleteStmt -%> DeleteStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
+        %% +.updateStmt -%> UpdateStmt
     ]
 
 let explainStmt =
