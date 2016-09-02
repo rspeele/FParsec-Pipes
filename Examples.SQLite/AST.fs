@@ -170,7 +170,7 @@ and WithClause =
 and CommonTableExpression =
     {
         Name : ObjectName
-        ColumnNames : ColumnName ResizeArray option
+        ColumnNames : Name ResizeArray option
         AsSelect : SelectStmt
     }
 
@@ -458,6 +458,15 @@ type CreateTriggerStmt =
         Actions : TriggerAction ResizeArray
     }
 
+type CreateViewStmt =
+    {
+        Temporary : bool
+        IfNotExists : bool
+        ViewName : ObjectName
+        ColumnNames : Name ResizeArray option
+        AsSelect : SelectStmt
+    }
+
 type Stmt =
     | AlterTableStmt of AlterTableStmt
     | AnalyzeStmt of ObjectName
@@ -467,6 +476,7 @@ type Stmt =
     | CreateIndexStmt of CreateIndexStmt
     | CreateTableStmt of CreateTableStmt
     | CreateTriggerStmt of CreateTriggerStmt
+    | CreateViewStmt of CreateViewStmt
     | DeleteStmt of DeleteStmt
     | InsertStmt of InsertStmt
     | RollbackStmt of SavepointName option

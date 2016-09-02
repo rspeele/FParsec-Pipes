@@ -618,16 +618,18 @@ do
             Operators = operators    
         } |> Precedence.expression
 
+let parenthesizedColumnNames =
+    %% '('
+    -- ws
+    -- +.(qty.[0..] / tws ',' * tws name)
+    -- ')'
+    -- ws
+    -%> id
+
 let commonTableExpression =
-    let columnNames =
-        %% '('
-        -- ws
-        -- +.(qty.[0..] / tws ',' * columnName)
-        -- ')'
-        -%> id
     %% +.objectName
     -- ws
-    -- +.(columnNames * zeroOrOne)
+    -- +.(zeroOrOne * parenthesizedColumnNames)
     -- kw "AS"
     -- '('
     -- +.selectStmt
@@ -883,11 +885,9 @@ let foreignKeyDeferClause =
     -%> fun not init -> { Deferrable = Option.isNone not; InitiallyDeferred = init }
 
 let foreignKeyClause =
-    let columns =
-        %% '(' -- ws -- +.(qty.[1..] / tws ',' * tws name) -- ')' -- ws -%> id
     %% kw "REFERENCES"
     -- +.objectName
-    -- +.(zeroOrOne * columns)
+    -- +.(zeroOrOne * parenthesizedColumnNames)
     -- +.(qty.[0..] * foreignKeyRule)
     -- +.(zeroOrOne * foreignKeyDeferClause)
     -%> fun table cols rules defer ->
@@ -995,11 +995,7 @@ let tableConstraintType =
     let foreignKey =
         %% kw "FOREIGN"
         -- kw "KEY"
-        -- '('
-        -- ws
-        -- +.(qty.[1..] / tws ',' * tws name)
-        -- ')'
-        -- ws
+        -- +.parenthesizedColumnNames
         -- +.foreignKeyClause
         -%> fun columns fk -> TableForeignKeyConstraint (columns, fk)
     %[
@@ -1198,17 +1194,11 @@ let insertOr =
     ]
 
 let insertStmt =
-    let intoColumns =
-        %% '('
-        -- ws
-        -- +.(qty.[1..] / tws ',' * tws name)
-        -- ')'
-        -%> id
     %% +.(zeroOrOne * withClause)
     -? +.insertOr
     -- kw "INTO"
     -- +.objectName
-    -- +.(zeroOrOne * intoColumns)
+    -- +.(zeroOrOne * parenthesizedColumnNames)
     -- +.[
             %% kw "DEFAULT" -- kw "VALUES" -%> None
             %% +.selectStmt -%> Some
@@ -1279,6 +1269,24 @@ let createTriggerStmt =
             Actions = actions
         }
 
+let createViewStmt =
+    %% kw "CREATE"
+    -- +.temporary
+    -? kw "VIEW"
+    -- +.ifNotExists
+    -- +.objectName
+    -- +.(zeroOrOne * parenthesizedColumnNames)
+    -- kw "AS"
+    -- +.selectStmt
+    -%> fun temp ifNotExists viewName cols asSelect ->
+        {
+            Temporary = Option.isSome temp
+            IfNotExists = Option.isSome ifNotExists
+            ViewName = viewName
+            ColumnNames = cols
+            AsSelect = asSelect
+        }
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1288,6 +1296,8 @@ let private almostAnyStmt =
         commitStmt
         %% +.createIndexStmt -%> CreateIndexStmt
         %% +.createTableStmt -%> CreateTableStmt
+        %% +.createTriggerStmt -%> CreateTriggerStmt
+        %% +.createViewStmt -%> CreateViewStmt
         %% +.deleteStmt -%> DeleteStmt
         %% +.insertStmt -%> InsertStmt
         rollbackStmt
