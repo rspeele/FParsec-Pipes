@@ -128,11 +128,12 @@ let isFollowingIdentifierCharacter c =
     || c >= '0' && c <= '9'
     || c = '$'
 
+let unquotedNameOrKeyword =
+    many1Satisfy2 isInitialIdentifierCharacter isFollowingIdentifierCharacter
+
 /// A plain, unquoted name.
 let unquotedName =
-    let identifier =
-        many1Satisfy2 isInitialIdentifierCharacter isFollowingIdentifierCharacter
-    identifier >>=? fun ident ->
+    unquotedNameOrKeyword >>=? fun ident ->
         if sqlKeywords.Contains(ident) then
             fail (sprintf "Reserved keyword %s used as name" ident)
         else
@@ -150,6 +151,14 @@ let name =
         bracketedName
         backtickedName
         unquotedName
+    ]
+
+let nameOrKeyword =
+    %[
+        quotedName
+        bracketedName
+        backtickedName
+        unquotedNameOrKeyword
     ]
 
 (**
@@ -493,13 +502,13 @@ let collateOperator =
 
 let isOperator =
     %% kw "IS"
-    -- +.(kw "NOT" * zeroOrOne)
+    -- +.(zeroOrOne * kw "NOT")
     -%> function
     | Some () -> binary IsNot
     | None -> binary Is
 
 let inOperator =
-    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
+    %% +.(zeroOrOne * kw "NOT")
     -? kw "IN"
     -- +.[
             %% '('
@@ -518,7 +527,7 @@ let inOperator =
     | None -> fun inSet left -> InExpr (left, inSet)
 
 let similarityOperator =
-    %% +.((%% kw "NOT" -- ws1 -%> ()) * zeroOrOne)
+    %% +.(zeroOrOne * kw "NOT")
     -? +.[
             %% kw "LIKE" -%> Like
             %% kw "GLOB" -%> Glob
@@ -1061,6 +1070,7 @@ let attachStmt =
     %% kw "ATTACH"
     -- zeroOrOne * kw "DATABASE"
     -- +.expr
+    -- kw "AS"
     -- +.name
     -%> fun ex schemaName -> ex, schemaName
 
@@ -1214,7 +1224,6 @@ let insertStmt =
             Data = data
         }
 
-
 let triggerSchedule =
     %[
         %% kw "BEFORE" -%> Before
@@ -1257,7 +1266,7 @@ let createTriggerStmt =
     -- zeroOrOne * (%% kw "FOR" -- kw "EACH" -- kw "ROW" -%> ())
     -- +.(zeroOrOne * whenClause)
     -- kw "BEGIN"
-    -- +.(qty.[1..] / tws ';' * tws triggerAction)
+    -- +.(qty.[1..] /. tws ';' * tws triggerAction)
     -- kw "END"
     -%> fun temp ifne triggerName schedule cause tableName whenClause actions ->
         {
@@ -1320,7 +1329,7 @@ let dropObjectStmt =
 let pragmaValue =
     let interiorValue =
         %[
-            %% +.name -%> NamePragmaValue
+            %% +.nameOrKeyword -%> NamePragmaValue
             %% +.stringLiteral -%> StringPragmaValue
             %% +.signedNumericLiteral -%> NumericPragmaValue
         ]
