@@ -1337,6 +1337,11 @@ let pragmaStmt =
             Value = value
         }
 
+let reindexStmt =
+    %% kw "REINDEX"
+    -- +.(zeroOrOne * objectName)
+    -%> ReindexStmt
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1353,6 +1358,7 @@ let private almostAnyStmt =
         %% +.dropObjectStmt -%> DropObjectStmt
         %% +.insertStmt -%> InsertStmt
         %% +.pragmaStmt -%> PragmaStmt
+        reindexStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
         %% +.updateStmt -%> UpdateStmt

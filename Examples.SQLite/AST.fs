@@ -504,8 +504,9 @@ type Stmt =
     | DeleteStmt of DeleteStmt
     | DetachStmt of Name
     | DropObjectStmt of DropObjectStmt
-    | PragmaStmt of PragmaStmt
     | InsertStmt of InsertStmt
+    | PragmaStmt of PragmaStmt
+    | ReindexStmt of ObjectName option
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt
