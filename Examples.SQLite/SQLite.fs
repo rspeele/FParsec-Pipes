@@ -1315,6 +1315,28 @@ let dropObjectStmt =
     -%> fun dropType ifExists name ->
         { Drop = dropType; IfExists = ifExists; IndexName = name }
 
+let pragmaValue =
+    let interiorValue =
+        %[
+            %% +.name -%> NamePragmaValue
+            %% +.stringLiteral -%> StringPragmaValue
+            %% +.signedNumericLiteral -%> NumericPragmaValue
+        ]
+    %[
+        %% '(' -- ws -- +.interiorValue -- ws -- ')' -%> id
+        %% '=' -- ws -- +.interiorValue -%> id
+    ]
+
+let pragmaStmt =
+    %% kw "PRAGMA"
+    -- +.objectName
+    -- +.(zeroOrOne * pragmaValue)
+    -%> fun name value ->
+        {
+            Pragma = name
+            Value = value
+        }
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1330,6 +1352,7 @@ let private almostAnyStmt =
         detachStmt
         %% +.dropObjectStmt -%> DropObjectStmt
         %% +.insertStmt -%> InsertStmt
+        %% +.pragmaStmt -%> PragmaStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
         %% +.updateStmt -%> UpdateStmt

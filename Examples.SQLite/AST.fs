@@ -480,6 +480,17 @@ type DropObjectStmt =
         IndexName : ObjectName
     }
 
+type PragmaValue =
+    | NamePragmaValue of Name
+    | StringPragmaValue of string
+    | NumericPragmaValue of SignedNumericLiteral
+
+type PragmaStmt =
+    {
+        Pragma : ObjectName
+        Value : PragmaValue option
+    }
+
 type Stmt =
     | AlterTableStmt of AlterTableStmt
     | AnalyzeStmt of ObjectName
@@ -493,6 +504,7 @@ type Stmt =
     | DeleteStmt of DeleteStmt
     | DetachStmt of Name
     | DropObjectStmt of DropObjectStmt
+    | PragmaStmt of PragmaStmt
     | InsertStmt of InsertStmt
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
