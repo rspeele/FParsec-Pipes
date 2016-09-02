@@ -13,6 +13,30 @@ type Tests() =
         | Success(result, _, _) -> printf "%A" result
         | Failure(msg, _, _) -> failwithf "Failure: %s" msg
 
+    static let testFile fileName =
+        let sql = File.ReadAllText(fileName)
+        let fileName = Path.GetFileName(fileName)
+        let failure =
+            try
+                match runParserOnString (SQLiteParser.stmts .>> eof) () fileName sql with
+                | Success(result, _, _) -> None
+                | Failure(msg, _, _) -> Some (sprintf "Failure: %s" msg)
+            with
+            | exn -> failwithf "Exception in %s (%O)" fileName exn
+        match failure with
+        | None -> ()
+        | Some fail -> failwith fail
+
+    [<TestMethod>]
+    [<Ignore>]
+    member __.TestSqlFiles() =
+        for file in Directory.GetFiles(@"TestFiles", "*.sql") do
+            testFile file
+
+    [<TestMethod>]
+    member __.TestNotIn() =
+        test @"select * from users where x > 5 and y not in (a,b,c)"
+
     [<TestMethod>]
     member __.TestSimpleSelect() =
         test @"select * from users u where u.id = 1"
@@ -70,6 +94,12 @@ type Tests() =
             select a, b, c from main.realtable
             where a > 5
             limit 1
+        "
+
+    [<TestMethod>]
+    member __.TestCreateWithBounds() =
+        test @"
+            create table tbl(x varchar(255), y numeric( 1 , 3 ))
         "
 
     [<TestMethod>]

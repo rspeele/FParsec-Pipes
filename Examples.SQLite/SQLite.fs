@@ -222,6 +222,19 @@ let columnName =
         | _ -> failwith "Unreachable")
     <?> "column-name"
 
+let qualifiedColumnName =
+   (%% +.nameOrString
+    -- ws
+    -? '.'
+    -- +.(qty.[0..2] / tws '.' * tws nameOrString)
+    -%> fun initial rest ->
+        match rest.Count with
+        | 0 -> { Table = None; ColumnName = initial }
+        | 1 -> { Table = Some { SchemaName = None; ObjectName = initial }; ColumnName = rest.[0] }
+        | 2 -> { Table = Some { SchemaName = Some initial; ObjectName = rest.[0] }; ColumnName = rest.[1] }
+        | _ -> failwith "Unreachable")
+    <?> "qualified-column-name"
+
 (**
 
 Bind parameters in prepared statements can take [several forms](https://www.sqlite.org/lang_expr.html#varparam).
@@ -551,8 +564,10 @@ let similarityOperator =
     | None -> fun op left right escape -> SimilarityExpr (op, left, right, escape)
 
 let notNullOperator =
-    %% kw "NOT"
-    -? kw "NULL"
+    %% [
+        kw "NOTNULL"
+        %% kw "NOT" -? kw "NULL" -%> ()
+    ]
     -%> fun left -> BinaryExpr(IsNot, left, LiteralExpr NullLiteral)
 
 let betweenOperator =
@@ -584,6 +599,7 @@ let term expr =
     %[
         %% '(' -- ws -- +.parenthesized -- ')' -%> id
         %% kw "EXISTS" -- ws -- '(' -- ws -- +.selectStmt -- ')' -%> ExistsExpr
+        %% +.qualifiedColumnName -%> ColumnNameExpr
         %% +.literal -%> LiteralExpr
         %% +.bindParameter -%> BindParameterExpr
         %% +.cast expr -%> CastExpr
@@ -979,6 +995,7 @@ let constraintType =
     %[
         %% +.primaryKeyClause -%> PrimaryKeyConstraint
         %% kw "NOT"  -- kw "NULL" -- +.conflictClause -%> NotNullConstraint
+        %% kw "NULL" -%> NullableConstraint
         %% kw "UNIQUE" -- +.conflictClause -%> UniqueConstraint
         %% kw "CHECK" -- '(' -- ws -- +.expr -- ')' -%> CheckConstraint
         %% kw "DEFAULT" -- +.defaultValue -%> DefaultConstraint
@@ -1216,7 +1233,7 @@ let updateOr =
 
 let updateStmt =
     let setColumn =
-        %% +.name
+        %% +.nameOrString
         -- ws
         -- '='
         -- ws

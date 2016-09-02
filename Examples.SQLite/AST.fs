@@ -301,6 +301,7 @@ type PrimaryKeyClause =
     }
 
 type ColumnConstraintType =
+    | NullableConstraint
     | PrimaryKeyConstraint of PrimaryKeyClause
     | NotNullConstraint of ConflictClause option
     | UniqueConstraint of ConflictClause option
