@@ -30,6 +30,8 @@ type Literal =
 
 type Name = string
 
+type SavepointName = Name
+
 type Alias = Name option
 
 type TypeBounds =
@@ -228,6 +230,12 @@ and IndexHint =
     | IndexedBy of Name
     | NotIndexed
 
+and QualifiedTableName =
+    {
+        TableName : ObjectName
+        IndexHint : IndexHint option
+    }
+
 and TableOrSubquery =
     | Table of TableInvocation * Alias * IndexHint option // note: an index hint is invalid if the table has args
     | Subquery of SelectStmt * Alias
@@ -379,11 +387,15 @@ type CreateIndexStmt =
         Where : Expr option
     }
 
-type SavepointName = Name
+type DeleteStmt =
+    {
+        With : WithClause option
+        DeleteFrom : QualifiedTableName
+        Where : Expr option
+    }
 
 type UpdateStmt = UpdateStmtPlaceholder
 type InsertStmt = InsertStmtPlaceholder
-type DeleteStmt = DeleteStmtPlaceholder
 
 type TriggerSchedule =
     | Before
@@ -422,6 +434,7 @@ type Stmt =
     | CreateIndexStmt of CreateIndexStmt
     | CreateTableStmt of CreateTableStmt
     | CreateTriggerStmt of CreateTriggerStmt
+    | DeleteStmt of DeleteStmt
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt

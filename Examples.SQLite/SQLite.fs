@@ -665,12 +665,13 @@ let selectColumns =
     -- +.(qty.[1..] / tws ',' * resultColumn)
     -%> fun distinct cols -> { Distinct = distinct; Columns = cols }
 
+let indexHint =
+    %[
+        %% kw "INDEXED" -- kw "BY" -- +.name -- ws -%> IndexedBy
+        %% kw "NOT" -- kw "INDEXED" -%> NotIndexed
+    ]
+
 let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
-    let indexHint =
-        %[
-            %% kw "INDEXED" -- kw "BY" -- +.name -%> IndexedBy
-            %% kw "NOT" -- kw "INDEXED" -%> NotIndexed
-        ]
     let subterm =
         %[
             %% +.selectStmt -%> fun select alias -> TableOrSubquery (Subquery (select, alias))
@@ -825,7 +826,7 @@ do
     selectStmtImpl :=
         (
             %% +.(zeroOrOne * withClause)
-            -- +.compoundExpr
+            -? +.compoundExpr
             -- +.(zeroOrOne * orderBy)
             -- +.(zeroOrOne * limit)
             -%> fun cte comp orderBy limit ->
@@ -1116,6 +1117,30 @@ let createIndexStmt =
             Where = whereExpr
         }
 
+let qualifiedTableName =
+    %% +.objectName
+    -- +.(zeroOrOne * indexHint)
+    -%> fun tableName hint ->
+        {
+            TableName = tableName
+            IndexHint = hint
+        }
+
+let deleteStmt =
+    let deleteWhereClause =
+        %% kw "WHERE" -- +.expr -%> id
+    %% +.(zeroOrOne * withClause)
+    -? kw "DELETE"
+    -- kw "FROM"
+    -- +.qualifiedTableName
+    -- +.(zeroOrOne * deleteWhereClause)
+    -%> fun withClause fromTable where ->
+        {
+            With = withClause
+            DeleteFrom = fromTable
+            Where = where
+        }
+
 let triggerSchedule =
     %[
         %% kw "BEFORE" -%> Before
@@ -1136,7 +1161,8 @@ let triggerCause =
 let triggerAction =
     %[
         %% +.selectStmt -%> TriggerSelect
-        // TODO: update/insert/delete statements
+        %% +.deleteStmt -%> TriggerDelete
+        // TODO: update/insert statements
     ]
 
 let createTriggerStmt =
@@ -1179,6 +1205,7 @@ let private almostAnyStmt =
         commitStmt
         %% +.createIndexStmt -%> CreateIndexStmt
         %% +.createTableStmt -%> CreateTableStmt
+        %% +.deleteStmt -%> DeleteStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
     ]
