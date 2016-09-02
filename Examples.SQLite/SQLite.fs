@@ -1342,6 +1342,12 @@ let reindexStmt =
     -- +.(zeroOrOne * objectName)
     -%> ReindexStmt
 
+let releaseStmt =
+    %% kw "RELEASE"
+    -- zeroOrOne * kw "SAVEPOINT"
+    -- +.name
+    -%> ReleaseStmt
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1359,6 +1365,7 @@ let private almostAnyStmt =
         %% +.insertStmt -%> InsertStmt
         %% +.pragmaStmt -%> PragmaStmt
         reindexStmt
+        releaseStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
         %% +.updateStmt -%> UpdateStmt

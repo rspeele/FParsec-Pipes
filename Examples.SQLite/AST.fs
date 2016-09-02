@@ -507,6 +507,7 @@ type Stmt =
     | InsertStmt of InsertStmt
     | PragmaStmt of PragmaStmt
     | ReindexStmt of ObjectName option
+    | ReleaseStmt of Name
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt
