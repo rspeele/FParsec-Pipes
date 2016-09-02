@@ -1035,13 +1035,15 @@ let createTableAs =
         %% +.createTableDefinition -%> CreateAsDefinition
     ]
 
-let ifNotExists = %% kw "IF" -- kw "NOT" -- kw "EXISTS" -%> ()
+let ifNotExists = %(zeroOrOne * (%% kw "IF" -- kw "NOT" -- kw "EXISTS" -%> ()))
+
+let temporary = %(zeroOrOne * [kw "TEMPORARY"; kw "TEMP"])
         
 let createTableStmt =
     %% kw "CREATE"
-    -- +.(zeroOrOne * [kw "TEMPORARY"; kw "TEMP"])
+    -- +.temporary
     -? kw "TABLE"
-    -- +.(zeroOrOne * ifNotExists)
+    -- +.ifNotExists
     -- +.objectName
     -- +.createTableAs
     -%> fun temp ifNotExists name createAs ->
@@ -1098,7 +1100,7 @@ let createIndexStmt =
     %% kw "CREATE"
     -- +.(zeroOrOne * kw "UNIQUE")
     -? kw "INDEX"
-    -- +.(zeroOrOne * ifNotExists)
+    -- +.ifNotExists
     -- +.objectName
     -- kw "ON"
     -- +.objectName
@@ -1112,6 +1114,60 @@ let createIndexStmt =
             TableName = tableName
             IndexedColumns = cols
             Where = whereExpr
+        }
+
+let triggerSchedule =
+    %[
+        %% kw "BEFORE" -%> Before
+        %% kw "AFTER" -%> After
+        %% kw "INSTEAD" -- kw "OF" -%> InsteadOf
+        preturn Before
+    ]
+
+let triggerCause =
+    let updateColumns =
+        %% kw "OF" -- +.(qty.[1..] / tws ',' * tws name) -%> id
+    %[
+        %% kw "DELETE" -%> DeleteOn
+        %% kw "INSERT" -%> InsertOn
+        %% kw "UPDATE" -- +.(zeroOrOne * updateColumns) -%> UpdateOn
+    ]
+
+let triggerAction =
+    %[
+        %% +.selectStmt -%> TriggerSelect
+        // TODO: update/insert/delete statements
+    ]
+
+let createTriggerStmt =
+    let whenClause =
+        %% kw "WHEN"
+        -- +.expr
+        -%> id
+    %% kw "CREATE"
+    -- +.temporary
+    -? kw "TRIGGER"
+    -- +.ifNotExists
+    -- +.objectName
+    -- +.triggerSchedule
+    -- +.triggerCause
+    -- kw "ON"
+    -- +.objectName
+    -- zeroOrOne * (%% kw "FOR" -- kw "EACH" -- kw "ROW" -%> ())
+    -- +.(zeroOrOne * whenClause)
+    -- kw "BEGIN"
+    -- +.(qty.[1..] / tws ';' * tws triggerAction)
+    -- kw "END"
+    -%> fun temp ifne triggerName schedule cause tableName whenClause actions ->
+        {
+            Temporary = Option.isSome temp
+            IfNotExists = Option.isSome ifne
+            TriggerName = triggerName
+            TableName = tableName
+            Schedule = schedule
+            Cause = cause
+            Condition = whenClause
+            Actions = actions
         }
 
 let private almostAnyStmt =

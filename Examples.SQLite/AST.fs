@@ -381,6 +381,38 @@ type CreateIndexStmt =
 
 type SavepointName = Name
 
+type UpdateStmt = UpdateStmtPlaceholder
+type InsertStmt = InsertStmtPlaceholder
+type DeleteStmt = DeleteStmtPlaceholder
+
+type TriggerSchedule =
+    | Before
+    | After
+    | InsteadOf
+
+type TriggerCause =
+    | DeleteOn
+    | InsertOn
+    | UpdateOn of Name ResizeArray option
+
+type TriggerAction =
+    | TriggerUpdate of UpdateStmt
+    | TriggerInsert of InsertStmt
+    | TriggerDelete of DeleteStmt
+    | TriggerSelect of SelectStmt
+
+type CreateTriggerStmt =
+    {
+        Temporary : bool
+        IfNotExists : bool
+        TriggerName : ObjectName
+        TableName : ObjectName
+        Schedule : TriggerSchedule
+        Cause : TriggerCause
+        Condition : Expr option
+        Actions : TriggerAction ResizeArray
+    }
+
 type Stmt =
     | AlterTableStmt of AlterTableStmt
     | AnalyzeStmt of ObjectName
@@ -389,6 +421,7 @@ type Stmt =
     | CommitStmt
     | CreateIndexStmt of CreateIndexStmt
     | CreateTableStmt of CreateTableStmt
+    | CreateTriggerStmt of CreateTriggerStmt
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt
