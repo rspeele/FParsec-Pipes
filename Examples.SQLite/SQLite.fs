@@ -89,6 +89,9 @@ let backtickedName =
 (**
 
 For unquoted names, we should ensure that a reserved keyword is not used.
+This list of reserved keywords was obtained by starting with the list
+[here](https://www.sqlite.org/lang_keywords.html) and removing those for which
+my local copy of SQLite accepted the query "SELECT * from X AS KEYWORD".
 
 *)
 
