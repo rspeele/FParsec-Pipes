@@ -44,15 +44,15 @@ type TypeName =
         Bounds : TypeBounds option
     }
 
-type TableName =
+type ObjectName =
     {
         SchemaName : Name option
-        TableName : Name
+        ObjectName : Name
     }
 
 type ColumnName =
     {
-        Table : TableName option
+        Table : ObjectName option
         ColumnName : Name
     }
 
@@ -119,7 +119,7 @@ and CastExpr =
  
 and TableInvocation =
     {
-        Table : TableName
+        Table : ObjectName
         Arguments : Expr ResizeArray option // we use an option to distinguish between schema.table and schema.table()
     }
 
@@ -167,7 +167,7 @@ and WithClause =
 
 and CommonTableExpression =
     {
-        Name : TableName
+        Name : ObjectName
         ColumnNames : ColumnName ResizeArray option
         AsSelect : SelectStmt
     }
@@ -221,7 +221,7 @@ and ResultColumns =
 
 and ResultColumn =
     | ColumnsWildcard
-    | TableColumnsWildcard of TableName
+    | TableColumnsWildcard of ObjectName
     | Column of Expr * Alias
 
 and IndexHint =
@@ -278,7 +278,7 @@ type ForeignKeyDeferClause =
 
 type ForeignKeyClause =
     {
-        ReferencesTable : TableName
+        ReferencesTable : ObjectName
         ReferencesColumns : Name ResizeArray option
         Rules : ForeignKeyRule ResizeArray
         Defer : ForeignKeyDeferClause option
@@ -319,7 +319,7 @@ type AlterTableAlteration =
 
 type AlterTableStmt =
     {
-        Table : TableName
+        Table : ObjectName
         Alteration : AlterTableAlteration
     }
 
@@ -360,7 +360,7 @@ type CreateTableStmt =
     {
         Temporary : bool
         IfNotExists : bool
-        Name : TableName
+        Name : ObjectName
         As : CreateTableAs
     }
 
@@ -369,14 +369,25 @@ type TransactionType =
     | Immediate
     | Exclusive
 
+type CreateIndexStmt =
+    {
+        Unique : bool
+        IfNotExists : bool
+        IndexName : ObjectName
+        TableName : ObjectName
+        IndexedColumns : (Expr * OrderDirection) ResizeArray
+        Where : Expr option
+    }
+
 type SavepointName = Name
 
 type Stmt =
     | AlterTableStmt of AlterTableStmt
-    | AnalyzeStmt of TableName
+    | AnalyzeStmt of ObjectName
     | AttachStmt of Expr * Name
     | BeginStmt of TransactionType
     | CommitStmt
+    | CreateIndexStmt of CreateIndexStmt
     | CreateTableStmt of CreateTableStmt
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt

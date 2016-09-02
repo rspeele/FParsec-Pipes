@@ -161,14 +161,14 @@ To avoid needless backtracking, we treat the second part as optional instead of 
 
 *)
 
-let tableName =
+let objectName =
     (%% +.name
     -- ws
     -- +.(zeroOrOne * (%% '.' -- ws -? +.name -- ws -%> id))
     -%> fun name name2 ->
         match name2 with
-        | None -> { SchemaName = None; TableName = name }
-        | Some name2 -> { SchemaName = Some name; TableName = name2 })
+        | None -> { SchemaName = None; ObjectName = name }
+        | Some name2 -> { SchemaName = Some name; ObjectName = name2 })
     <?> "table-name"
 
 (**
@@ -187,8 +187,8 @@ let columnName =
     |>> fun names ->
         match names.Count with
         | 1 -> { Table = None; ColumnName = names.[0] }
-        | 2 -> { Table = Some { SchemaName = None; TableName = names.[0] }; ColumnName = names.[1] }
-        | 3 -> { Table = Some { SchemaName = Some names.[0]; TableName = names.[1] }; ColumnName = names.[2] }
+        | 2 -> { Table = Some { SchemaName = None; ObjectName = names.[0] }; ColumnName = names.[1] }
+        | 3 -> { Table = Some { SchemaName = Some names.[0]; ObjectName = names.[1] }; ColumnName = names.[2] }
         | _ -> failwith "Unreachable")
     <?> "column-name"
 
@@ -481,7 +481,7 @@ let selectStmt, private selectStmtImpl = createParserForwardedToRef<SelectStmt, 
 let tableInvocation =
     let args =
         %% '(' -- ws -- +.(qty.[0..] / tws ',' * expr) -- ')' -%> id
-    %% +.tableName
+    %% +.objectName
     -- ws
     -- +.(args * zeroOrOne)
     -%> fun name args -> { Table = name; Arguments = args }
@@ -625,7 +625,7 @@ let commonTableExpression =
         -- +.(qty.[0..] / tws ',' * columnName)
         -- ')'
         -%> id
-    %% +.tableName
+    %% +.objectName
     -- ws
     -- +.(columnNames * zeroOrOne)
     -- kw "AS"
@@ -651,7 +651,7 @@ let asAlias =
 let resultColumn =
     %% +.[
         %% '*' -%> ColumnsWildcard
-        %% +.tableName -- '.' -? '*' -%> TableColumnsWildcard
+        %% +.objectName -- '.' -? '*' -%> TableColumnsWildcard
         %% +.expr -- +.(asAlias * zeroOrOne) -%> fun ex alias -> Column (ex, alias)
     ] -- ws -%> id
 
@@ -886,7 +886,7 @@ let foreignKeyClause =
     let columns =
         %% '(' -- ws -- +.(qty.[1..] / tws ',' * tws name) -- ')' -- ws -%> id
     %% kw "REFERENCES"
-    -- +.tableName
+    -- +.objectName
     -- +.(zeroOrOne * columns)
     -- +.(qty.[0..] * foreignKeyRule)
     -- +.(zeroOrOne * foreignKeyDeferClause)
@@ -966,7 +966,7 @@ let alterTableStmt =
         -%> AddColumn
     %% kw "ALTER"
     -- kw "TABLE"
-    -- +.tableName
+    -- +.objectName
     -- +.[ renameTo; addColumn ]
     -%> fun table alteration -> { Table = table; Alteration = alteration }
 
@@ -975,13 +975,18 @@ let tableIndexConstraintType =
         %% kw "PRIMARY" -- kw "KEY" -%> PrimaryKey
         %% kw "UNIQUE" -%> Unique
     ]
-let tableIndexConstraint =
-    %% +.tableIndexConstraintType
-    -- '('
+
+let indexedColumns =
+    %% '('
     -- ws
     -- +.(qty.[1..] / tws ',' * (%% +.expr -- +.orderDirection -%> auto))
     -- ')'
     -- ws
+    -%> id
+
+let tableIndexConstraint =
+    %% +.tableIndexConstraintType
+    -- +.indexedColumns
     -- +.conflictClause
     -%> fun cty cols conflict ->
         { Type = cty; IndexedColumns = cols; ConflictClause = conflict }
@@ -1029,13 +1034,15 @@ let createTableAs =
         %% kw "AS" -- +.selectStmt -%> CreateAsSelect
         %% +.createTableDefinition -%> CreateAsDefinition
     ]
+
+let ifNotExists = %% kw "IF" -- kw "NOT" -- kw "EXISTS" -%> ()
         
 let createTableStmt =
     %% kw "CREATE"
     -- +.(zeroOrOne * [kw "TEMPORARY"; kw "TEMP"])
-    -- kw "TABLE"
-    -- +.(zeroOrOne * (%% kw "IF" -- kw "NOT" -- kw "EXISTS" -%> ()))
-    -- +.tableName
+    -? kw "TABLE"
+    -- +.(zeroOrOne * ifNotExists)
+    -- +.objectName
     -- +.createTableAs
     -%> fun temp ifNotExists name createAs ->
         {
@@ -1047,7 +1054,7 @@ let createTableStmt =
 
 let analyzeStmt =
     %% kw "ANALYZE"
-    -- +.tableName
+    -- +.objectName
     -%> id
 
 let attachStmt =
@@ -1087,6 +1094,26 @@ let rollbackStmt =
     -- +.(zeroOrOne * toPoint)
     -%> RollbackStmt
 
+let createIndexStmt =
+    %% kw "CREATE"
+    -- +.(zeroOrOne * kw "UNIQUE")
+    -? kw "INDEX"
+    -- +.(zeroOrOne * ifNotExists)
+    -- +.objectName
+    -- kw "ON"
+    -- +.objectName
+    -- +.indexedColumns
+    -- +.(zeroOrOne * (%% kw "WHERE" -- +.expr -%> id))
+    -%> fun unique ifNotExists indexName tableName cols whereExpr ->
+        {
+            Unique = Option.isSome unique
+            IfNotExists = Option.isSome ifNotExists
+            IndexName = indexName
+            TableName = tableName
+            IndexedColumns = cols
+            Where = whereExpr
+        }
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1094,6 +1121,7 @@ let private almostAnyStmt =
         %% +.attachStmt -%> AttachStmt
         beginStmt
         commitStmt
+        %% +.createIndexStmt -%> CreateIndexStmt
         %% +.createTableStmt -%> CreateTableStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
