@@ -1181,6 +1181,48 @@ let updateStmt =
             Limit = limit
         }
 
+let insertOr =
+    let orPart =
+        %% kw "OR"
+        -- +.[
+                %% kw "REPLACE" -%> InsertOrReplace
+                %% kw "ROLLBACK" -%> InsertOrRollback
+                %% kw "ABORT" -%> InsertOrAbort
+                %% kw "FAIL" -%> InsertOrFail
+                %% kw "IGNORE" -%> InsertOrIgnore
+            ]
+        -%> id
+    %[
+        %% kw "REPLACE" -%> Some InsertOrReplace
+        %% kw "INSERT" -- +.(zeroOrOne * orPart) -%> id
+    ]
+
+let insertStmt =
+    let intoColumns =
+        %% '('
+        -- ws
+        -- +.(qty.[1..] / tws ',' * tws name)
+        -- ')'
+        -%> id
+    %% +.(zeroOrOne * withClause)
+    -? +.insertOr
+    -- kw "INTO"
+    -- +.objectName
+    -- +.(zeroOrOne * intoColumns)
+    -- +.[
+            %% kw "DEFAULT" -- kw "VALUES" -%> None
+            %% +.selectStmt -%> Some
+        ]
+    -%> fun withClause insert table cols data ->
+        {
+            With = withClause
+            Or = insert
+            InsertInto = table
+            Columns = cols
+            Data = data
+        }
+
+
 let triggerSchedule =
     %[
         %% kw "BEFORE" -%> Before
@@ -1203,7 +1245,7 @@ let triggerAction =
         %% +.selectStmt -%> TriggerSelect
         %% +.deleteStmt -%> TriggerDelete
         %% +.updateStmt -%> TriggerUpdate
-        // TODO: insert statements
+        %% +.insertStmt -%> TriggerInsert
     ]
 
 let createTriggerStmt =
@@ -1247,6 +1289,7 @@ let private almostAnyStmt =
         %% +.createIndexStmt -%> CreateIndexStmt
         %% +.createTableStmt -%> CreateTableStmt
         %% +.deleteStmt -%> DeleteStmt
+        %% +.insertStmt -%> InsertStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt
         %% +.updateStmt -%> UpdateStmt

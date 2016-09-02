@@ -413,7 +413,22 @@ type UpdateStmt =
         OrderBy : OrderingTerm ResizeArray option
         Limit : Limit option
     }
-type InsertStmt = InsertStmtPlaceholder
+
+type InsertOr =
+    | InsertOrRollback
+    | InsertOrAbort
+    | InsertOrReplace
+    | InsertOrFail
+    | InsertOrIgnore
+
+type InsertStmt =
+    {
+        With : WithClause option
+        Or : InsertOr option
+        InsertInto : ObjectName
+        Columns : Name ResizeArray option
+        Data : SelectStmt option // either select/values, or "default values" if none
+    }
 
 type TriggerSchedule =
     | Before
@@ -453,6 +468,7 @@ type Stmt =
     | CreateTableStmt of CreateTableStmt
     | CreateTriggerStmt of CreateTriggerStmt
     | DeleteStmt of DeleteStmt
+    | InsertStmt of InsertStmt
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt
