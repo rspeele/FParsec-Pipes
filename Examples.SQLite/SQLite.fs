@@ -155,7 +155,7 @@ let name =
 
 (**
 
-Next are string literals, which are similar in implementation to quoted identifiers.
+String literals can be used as names in some places. They are similar in implementation to quoted identifiers.
 
 *)
 
@@ -966,7 +966,7 @@ let columnConstraint =
     -%> fun name cty -> { Name = name; ColumnConstraintType = cty }
 
 let columnDef =
-    %% +.name
+    %% +.nameOrString
     -- ws
     -- +.(typeName * zeroOrOne)
     -- +.(columnConstraint * qty.[0..])
@@ -1318,6 +1318,44 @@ let createViewStmt =
             AsSelect = asSelect
         }
 
+let createVirtualTableStmt =
+    let moduleArgumentTopChunk =
+        many1Satisfy (fun c -> c <> '(' && c <> ')' && c <> ',')
+    let moduleArgumentInnerChunk =
+        many1Satisfy (fun c -> c <> '(' && c <> ')')
+    let moduleArgumentNest =
+        precursive <| fun moduleArgumentNest ->
+            let chunk = moduleArgumentNest <|> moduleArgumentInnerChunk
+            %% '('
+            -- +.manyStrings chunk
+            -- ')'
+            -%> fun s -> "(" + s + ")"
+    let moduleArgument =
+        let chunk = moduleArgumentNest <|> moduleArgumentTopChunk
+        manyStrings chunk
+    let moduleArguments =
+        %% '('
+        -- ws
+        -- +.(qty.[0..] / ',' * moduleArgument)
+        -- ')'
+        -%> id
+    %% kw "CREATE"
+    -? kw "VIRTUAL"
+    -- kw "TABLE"
+    -- +.ifNotExists
+    -- +.objectName
+    -- kw "USING"
+    -- +.name
+    -- ws
+    -- +.(zeroOrOne * moduleArguments)
+    -%> fun ifNotExists vTableName usingModule withArgs ->
+        {
+            IfNotExists = Option.isSome ifNotExists
+            VirtualTable = vTableName
+            UsingModule = usingModule
+            WithModuleArguments = defaultArg withArgs (new ResizeArray<_>())
+        }
+
 let detachStmt =
     %% kw "DETACH"
     -- zeroOrOne * kw "DATABASE"
@@ -1398,6 +1436,7 @@ let private almostAnyStmt =
         %% +.createTableStmt -%> CreateTableStmt
         %% +.createTriggerStmt -%> CreateTriggerStmt
         %% +.createViewStmt -%> CreateViewStmt
+        %% +.createVirtualTableStmt -%> CreateVirtualTableStmt
         %% +.deleteStmt -%> DeleteStmt
         detachStmt
         %% +.dropObjectStmt -%> DropObjectStmt

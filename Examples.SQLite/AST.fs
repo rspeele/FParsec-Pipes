@@ -489,6 +489,14 @@ type RollbackStmt =
     | RollbackTransactionByName of Name
     | RollbackTransaction
 
+type CreateVirtualTableStmt =
+    {
+        IfNotExists : bool
+        VirtualTable : ObjectName
+        UsingModule : Name
+        WithModuleArguments : string ResizeArray
+    }
+
 type Stmt =
     | AlterTableStmt of AlterTableStmt
     | AnalyzeStmt of ObjectName option
@@ -499,6 +507,7 @@ type Stmt =
     | CreateTableStmt of CreateTableStmt
     | CreateTriggerStmt of CreateTriggerStmt
     | CreateViewStmt of CreateViewStmt
+    | CreateVirtualTableStmt of CreateVirtualTableStmt
     | DeleteStmt of DeleteStmt
     | DetachStmt of Name
     | DropObjectStmt of DropObjectStmt
