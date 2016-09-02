@@ -1134,11 +1134,15 @@ let deleteStmt =
     -- kw "FROM"
     -- +.qualifiedTableName
     -- +.(zeroOrOne * deleteWhereClause)
-    -%> fun withClause fromTable where ->
+    -- +.(zeroOrOne * orderBy)
+    -- +.(zeroOrOne * limit)
+    -%> fun withClause fromTable where orderBy limit ->
         {
             With = withClause
             DeleteFrom = fromTable
             Where = where
+            OrderBy = orderBy
+            Limit = limit
         }
 
 let triggerSchedule =

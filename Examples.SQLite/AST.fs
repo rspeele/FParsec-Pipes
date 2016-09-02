@@ -392,6 +392,8 @@ type DeleteStmt =
         With : WithClause option
         DeleteFrom : QualifiedTableName
         Where : Expr option
+        OrderBy : OrderingTerm ResizeArray option
+        Limit : Limit option
     }
 
 type UpdateStmt = UpdateStmtPlaceholder
