@@ -606,6 +606,8 @@ let private operators = [
     ]
     [
         infixl (kw "AND") <| binary And
+    ]
+    [
         infixl (kw "OR") <| binary Or
     ]
 ]
