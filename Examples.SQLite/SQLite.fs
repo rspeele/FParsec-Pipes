@@ -1348,6 +1348,15 @@ let releaseStmt =
     -- +.name
     -%> ReleaseStmt
 
+let savepointStmt =
+    %% kw "SAVEPOINT"
+    -- +.name
+    -%> SavepointStmt
+
+let vacuumStmt =
+    %% kw "VACUUM"
+    -%> VacuumStmt
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1367,8 +1376,10 @@ let private almostAnyStmt =
         reindexStmt
         releaseStmt
         rollbackStmt
+        savepointStmt
         %% +.selectStmt -%> SelectStmt
         %% +.updateStmt -%> UpdateStmt
+        vacuumStmt
     ]
 
 let explainStmt =

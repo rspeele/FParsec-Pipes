@@ -509,6 +509,8 @@ type Stmt =
     | ReindexStmt of ObjectName option
     | ReleaseStmt of Name
     | RollbackStmt of SavepointName option
+    | SavepointStmt of SavepointName
     | SelectStmt of SelectStmt
     | ExplainStmt of Stmt
     | UpdateStmt of UpdateStmt
+    | VacuumStmt
