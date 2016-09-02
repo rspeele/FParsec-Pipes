@@ -1287,6 +1287,34 @@ let createViewStmt =
             AsSelect = asSelect
         }
 
+let detachStmt =
+    %% kw "DETACH"
+    -- zeroOrOne * kw "DATABASE"
+    -- +.name
+    -%> DetachStmt
+
+let ifExists =
+    %[
+        %% kw "IF" -- kw "EXISTS" -%> true
+        preturn false
+    ]
+
+let dropObjectType =
+    %[
+        %% kw "INDEX" -%> DropIndex
+        %% kw "TABLE" -%> DropTable
+        %% kw "TRIGGER" -%> DropTrigger
+        %% kw "VIEW" -%> DropView
+    ]
+
+let dropObjectStmt =
+    %% kw "DROP"
+    -? +.dropObjectType
+    -- +.ifExists
+    -- +.objectName
+    -%> fun dropType ifExists name ->
+        { Drop = dropType; IfExists = ifExists; IndexName = name }
+
 let private almostAnyStmt =
     %[
         %% +.alterTableStmt -%> AlterTableStmt
@@ -1299,6 +1327,8 @@ let private almostAnyStmt =
         %% +.createTriggerStmt -%> CreateTriggerStmt
         %% +.createViewStmt -%> CreateViewStmt
         %% +.deleteStmt -%> DeleteStmt
+        detachStmt
+        %% +.dropObjectStmt -%> DropObjectStmt
         %% +.insertStmt -%> InsertStmt
         rollbackStmt
         %% +.selectStmt -%> SelectStmt

@@ -467,6 +467,19 @@ type CreateViewStmt =
         AsSelect : SelectStmt
     }
 
+type DropObjectType =
+    | DropIndex
+    | DropTable
+    | DropTrigger
+    | DropView
+
+type DropObjectStmt =
+    {
+        Drop : DropObjectType
+        IfExists : bool
+        IndexName : ObjectName
+    }
+
 type Stmt =
     | AlterTableStmt of AlterTableStmt
     | AnalyzeStmt of ObjectName
@@ -478,6 +491,8 @@ type Stmt =
     | CreateTriggerStmt of CreateTriggerStmt
     | CreateViewStmt of CreateViewStmt
     | DeleteStmt of DeleteStmt
+    | DetachStmt of Name
+    | DropObjectStmt of DropObjectStmt
     | InsertStmt of InsertStmt
     | RollbackStmt of SavepointName option
     | SelectStmt of SelectStmt
