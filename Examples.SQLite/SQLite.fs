@@ -94,24 +94,23 @@ For unquoted names, we should ensure that a reserved keyword is not used.
 
 let sqlKeywords =
     [
-        "ABORT"; "ACTION"; "ADD"; "AFTER"; "ALL"; "ALTER"; "ANALYZE";
-        "AND"; "AS"; "ASC"; "ATTACH"; "BEFORE"; "BEGIN";
-        "BETWEEN"; "BY"; "CASCADE"; "CASE"; "CAST"; "CHECK"; "COLLATE";
-        "COLUMN"; "COMMIT"; "CONFLICT"; "CONSTRAINT"; "CREATE"; "CROSS";
-        "CURRENT_DATE"; "CURRENT_TIME"; "CURRENT_TIMESTAMP"; "DATABASE";
-        "DEFAULT"; "DEFERRABLE"; "DEFERRED"; "DELETE"; "DESC"; "DETACH";
-        "DISTINCT"; "DROP"; "EACH"; "ELSE"; "END"; "ESCAPE"; "EXCEPT";
-        "EXCLUSIVE"; "EXISTS"; "EXPLAIN"; "FAIL"; "FOR"; "FOREIGN"; "FROM";
-        "FULL"; "GLOB"; "GROUP"; "HAVING"; "IF"; "IGNORE"; "IMMEDIATE"; "IN";
-        "INDEX"; "INDEXED"; "INITIALLY"; "INNER"; "INSERT"; "INSTEAD";
-        "INTERSECT"; "INTO"; "IS"; "ISNULL"; "JOIN"; "KEY"; "LEFT";
-        "LIMIT"; "MATCH"; "NATURAL"; "NO"; "NOT"; "NOTNULL"; "NULL"; "OF";
-        "OFFSET"; "ON"; "OR"; "ORDER"; "OUTER"; "PLAN"; "PRAGMA"; "PRIMARY";
-        "QUERY"; "RAISE"; "RECURSIVE"; "REFERENCES"; "REGEXP"; "REINDEX";
-        "RELEASE"; "RENAME"; "REPLACE"; "RESTRICT"; "RIGHT"; "ROLLBACK"; "ROW";
-        "SAVEPOINT"; "SELECT"; "SET"; "TABLE"; "TEMPORARY"; "THEN";
-        "TO"; "TRANSACTION"; "TRIGGER"; "UNION"; "UNIQUE"; "UPDATE"; "USING";
-        "VACUUM"; "VALUES"; "VIEW"; "VIRTUAL"; "WHEN"; "WHERE"; "WITH"; "WITHOUT"
+        "ADD"; "ALL"; "ALTER";
+        "AND"; "AS";
+        "BETWEEN"; "CASE"; "CHECK"; "COLLATE";
+        "COMMIT"; "CONFLICT"; "CONSTRAINT"; "CREATE"; "CROSS";
+        "DEFAULT"; "DEFERRABLE"; "DELETE";
+        "DISTINCT"; "DROP"; "ELSE"; "ESCAPE"; "EXCEPT";
+        "EXISTS"; "FOREIGN"; "FROM";
+        "FULL"; "GLOB"; "GROUP"; "HAVING"; "IN";
+        "INNER"; "INSERT";
+        "INTERSECT"; "INTO"; "IS"; "ISNULL"; "JOIN"; "LEFT";
+        "LIMIT"; "NATURAL"; "NOT"; "NOTNULL"; "NULL";
+        "ON"; "OR"; "ORDER"; "OUTER"; "PRIMARY";
+        "REFERENCES";
+        "RIGHT";
+        "SELECT"; "SET"; "TABLE"; "THEN";
+        "TO"; "TRANSACTION"; "UNION"; "UNIQUE"; "UPDATE"; "USING";
+        "VALUES"; "WHEN"; "WHERE";
         // Note: we don't include TEMP in this list because it is a schema name.
     ] |> fun kws ->
         HashSet<string>(kws, StringComparer.OrdinalIgnoreCase)
@@ -193,9 +192,9 @@ To avoid needless backtracking, we treat the second part as optional instead of 
 *)
 
 let objectName =
-    (%% +.nameOrString
+    (%% +.nameOrKeyword
     -- ws
-    -- +.(zeroOrOne * (%% '.' -- ws -? +.nameOrString -- ws -%> id))
+    -- +.(zeroOrOne * (%% '.' -- ws -? +.nameOrKeyword -- ws -%> id))
     -%> fun name name2 ->
         match name2 with
         | None -> { SchemaName = None; ObjectName = name }
@@ -235,7 +234,7 @@ Named parameters are prefixed by `@`, `:`, or `$`.
 
 let namedBindParameter =
     %% +.['@'; ':'; '$']
-    -- +.name
+    -- +.unquotedNameOrKeyword
     -%> fun prefix name -> NamedParameter (prefix, name)
 
 (**
@@ -406,6 +405,7 @@ let typeBounds =
     -- ws
     -- +.(qty.[1..2] / tws ',' * tws signedNumericLiteral)
     -- ')'
+    -- ws
     -%> fun bounds ->
         match bounds.Count with
         | 1 -> { Low = bounds.[0]; High = None }
@@ -461,7 +461,7 @@ let functionArguments (expr : Parser<Expr, unit>) =
     ]
 
 let functionInvocation expr =
-    %% +.name
+    %% +.nameOrKeyword
     -- ws
     -? '('
     -- ws
@@ -480,13 +480,18 @@ let case expr =
         %% kw "ELSE"
         -- +.expr
         -%> id
+    let whenForm =
+        %% +.(whenClause * qty.[1..])
+        -- +.(elseClause * zeroOrOne)
+        -- kw "END"
+        -%> fun cases els -> { Input = None; Cases = cases; Else = els }
+    let ofForm =
+        %% +.expr
+        -- +.whenForm
+        -%> fun ofExpr case -> { case with Input = Some ofExpr }
     %% kw "CASE"
-    -- +.(expr * zeroOrOne)
-    -- +.(whenClause * qty.[1..])
-    -- +.(elseClause * zeroOrOne)
-    -- kw "END"
-    -%> fun input cases els ->
-        { Input = input; Cases = cases; Else = els }
+    -- +.[ whenForm; ofForm ]
+    -%> id
 
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
@@ -557,6 +562,19 @@ let betweenOperator =
     | Some () -> fun input low high -> NotBetweenExpr (input, low, high)
     | None -> fun input low high -> BetweenExpr (input, low, high)
 
+let raiseTrigger =
+    %% kw "RAISE"
+    -- '('
+    -- ws
+    -- +.[
+            %% kw "IGNORE" -%> RaiseIgnore
+            %% kw "ROLLBACK" -- ',' -- ws -- +.stringLiteral -- ws -%> RaiseRollback
+            %% kw "ABORT" -- ',' -- ws -- +.stringLiteral -- ws -%> RaiseAbort
+            %% kw "FAIL" -- ',' -- ws -- +.stringLiteral -- ws -%> RaiseFail
+        ]
+    -- ')'
+    -%> RaiseExpr
+
 let term expr =
     let parenthesized =
         %[
@@ -570,6 +588,7 @@ let term expr =
         %% +.bindParameter -%> BindParameterExpr
         %% +.cast expr -%> CastExpr
         %% +.case expr -%> CaseExpr
+        raiseTrigger
         %% +.functionInvocation expr -%> FunctionInvocationExpr
         %% +.columnName -%> ColumnNameExpr
     ]
@@ -639,7 +658,7 @@ do
 let parenthesizedColumnNames =
     %% '('
     -- ws
-    -- +.(qty.[0..] / tws ',' * tws name)
+    -- +.(qty.[0..] / tws ',' * tws nameOrString)
     -- ')'
     -- ws
     -%> id
@@ -687,7 +706,7 @@ let selectColumns =
 
 let indexHint =
     %[
-        %% kw "INDEXED" -- kw "BY" -- +.name -- ws -%> IndexedBy
+        %% kw "INDEXED" -- kw "BY" -- +.nameOrKeyword -- ws -%> IndexedBy
         %% kw "NOT" -- kw "INDEXED" -%> NotIndexed
     ]
 
@@ -697,9 +716,15 @@ let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
             %% +.selectStmt -%> fun select alias -> TableOrSubquery (Subquery (select, alias))
             %% +.tableExpr -%> fun table alias -> AliasedTableExpr (table, alias)
         ]
+    let by =
+        %[
+            %% +.indexHint -%> fun indexed table -> TableOrSubquery (Table (table, None, Some indexed))
+            %% +.(asAlias * zeroOrOne) -- +.(indexHint * zeroOrOne)
+                -%> fun alias indexed table -> TableOrSubquery (Table (table, alias, indexed))
+        ]
+
     %[
-        %% +.tableInvocation -- +.(asAlias * zeroOrOne) -- +.(indexHint * zeroOrOne)
-            -%> fun table alias indexed -> TableOrSubquery (Table (table, alias, indexed))
+        %% +.tableInvocation -- +.by -%> fun table by -> by table
         %% '(' -- ws -- +.subterm -- ')' -- ws -- +.(asAlias * zeroOrOne) -%> (<|)
     ]
 
@@ -835,7 +860,7 @@ let orderBy =
 
 let limit =
     let offset =
-        %% [kw ","; kw "OFFSET"]
+        %% [%% ',' -- ws -%> (); kw "OFFSET"]
         -- +.expr
         -%> id
     %% kw "LIMIT"
@@ -948,6 +973,8 @@ let constraintType =
             %% +.signedNumericLiteral -%> signedToExpr
             %% +.literal -%> LiteralExpr
             %% '(' -- ws -- +.expr -- ')' -%> id
+            // docs don't mention this, but it works
+            %% +.name -%> (StringLiteral >> LiteralExpr)
         ]
     %[
         %% +.primaryKeyClause -%> PrimaryKeyConstraint
@@ -966,7 +993,7 @@ let columnConstraint =
     -%> fun name cty -> { Name = name; ColumnConstraintType = cty }
 
 let columnDef =
-    %% +.nameOrString
+    %% +.nameOrKeyword
     -- ws
     -- +.(typeName * zeroOrOne)
     -- +.(columnConstraint * qty.[0..])
@@ -1035,17 +1062,23 @@ let tableConstraint =
     -%> fun name cty -> { Name = name; TableConstraintType = cty }
 
 let createTableDefinition =
+    let part =
+        %[
+            %% +.tableConstraint -%> Choice1Of2
+            %% +.columnDef -%> Choice2Of2
+        ]
     %% '('
     -- ws
-    -- +.(qty.[0..] /. tws ',' * columnDef)
-    -- +.(qty.[0..] / tws ',' * tableConstraint)
+    -- +.(qty.[0..] /. tws ',' * part)
     -- ')'
     -- ws
     -- +.(zeroOrOne * (%% kw "WITHOUT" -- kw "ROWID" -- ws -%> ()))
-    -%> fun columns constraints without ->
+    -%> fun parts without ->
         {
-            Columns = columns
-            Constraints = constraints
+            Columns =
+                parts |> Seq.choose (function | Choice2Of2 cdef -> Some cdef | Choice1Of2 _ -> None) |> ResizeArray
+            Constraints =
+                parts |> Seq.choose (function | Choice1Of2 ct -> Some ct | Choice2Of2 _ -> None) |> ResizeArray
             WithoutRowId = Option.isSome without
         }
 
@@ -1461,7 +1494,7 @@ let anyStmt = %[ explainStmt; almostAnyStmt ]
 
 let private stmtsAtLeast min =
     %% ws
-    -- +.(qty.[min..] /. tws ';' * anyStmt)
+    -- +.(qty.[min..] /. tws ';' * tws anyStmt)
     -%> List.ofSeq
 
 let stmts = stmtsAtLeast 0

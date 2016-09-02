@@ -89,6 +89,12 @@ type SimilarityOperator =
     | Match
     | Regexp
 
+type Raise =
+    | RaiseIgnore
+    | RaiseRollback of string
+    | RaiseAbort of string
+    | RaiseFail of string
+
 type Expr =
     | LiteralExpr of Literal
     | BindParameterExpr of BindParameter
@@ -106,6 +112,7 @@ type Expr =
     | ExistsExpr of SelectStmt
     | CaseExpr of CaseExpr
     | ScalarSubqueryExpr of SelectStmt
+    | RaiseExpr of Raise
 
 and CastExpr =
     {
