@@ -43,7 +43,7 @@ type Ignore<'a, 'u> =
     static member (?--) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackLeft pipe p
     static member (--?) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackRight pipe p
 
-/// Reprsents a parser whose output is captured within a pipeline.
+/// Represents a parser whose output is captured within a pipeline.
 type Capture<'a, 'u> =
     | Capture of Parser<'a, 'u>
     static member (---) (pipe, Capture (p : Parser<'a, 'u>)) = appendCapture pipe p
