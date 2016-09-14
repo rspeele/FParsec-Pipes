@@ -46,23 +46,30 @@ type IPipeAppendBacktrackable<'u, 'r1, 'r2> =
     abstract member AppendBacktrackLeftTo : Pipe<'a, 'a, 'b, 'r1, 'u> -> Pipe<'r2, 'f, 'b, 'f, 'u>
     abstract member AppendBacktrackRightTo : Pipe<'a, 'a, 'b, 'r1, 'u> -> Pipe<'r2, 'f, 'b, 'f, 'u>
 
-type IgnoreFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
+[<AbstractClass>]
+type BaseFitting<'a, 'u, 'inp1, 'r1, 'inp2, 'r2>(parser : Parser<'a, 'u>) =
+    abstract member AppendTo : Pipe<'inp1, 'out, 'fn, 'r, 'u> -> Pipe<'inp2, 'out, 'fn, 'r, 'u>
+    abstract member AppendBacktrackLeftTo : Pipe<'x, 'x, 'b, 'r1, 'u> -> Pipe<'r2, 'f, 'b, 'f, 'u>
+    abstract member AppendBacktrackRightTo : Pipe<'x, 'x, 'b, 'r1, 'u> -> Pipe<'r2, 'f, 'b, 'f, 'u>
     interface IPipeFitting<'a, 'u> with
         member __.Parser = parser
-    interface IPipeAppendable<'u, 'inp, 'inp> with
-        member __.AppendTo(pipe) = appendIgnore pipe parser
-    interface IPipeAppendBacktrackable<'u, 'r, 'r> with
-        member __.AppendBacktrackLeftTo(pipe) = appendIgnoreBacktrackLeft pipe parser
-        member __.AppendBacktrackRightTo(pipe) = appendIgnoreBacktrackRight pipe parser
+    interface IPipeAppendable<'u, 'inp1, 'inp2> with
+        member this.AppendTo(pipe) = this.AppendTo(pipe)
+    interface IPipeAppendBacktrackable<'u, 'r1, 'r2> with
+        member this.AppendBacktrackLeftTo(pipe) = this.AppendBacktrackLeftTo(pipe)
+        member this.AppendBacktrackRightTo(pipe) = this.AppendBacktrackRightTo(pipe)
+
+type IgnoreFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
+    inherit BaseFitting<'a, 'u, 'inp, 'r, 'inp, 'r>(parser)
+    override __.AppendTo(pipe) = appendIgnore pipe parser
+    override __.AppendBacktrackLeftTo(pipe) = appendIgnoreBacktrackLeft pipe parser
+    override __.AppendBacktrackRightTo(pipe) = appendIgnoreBacktrackRight pipe parser
 
 type CaptureFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
-    interface IPipeFitting<'a, 'u> with
-        member __.Parser = parser
-    interface IPipeAppendable<'u, 'a -> 'inp, 'inp> with
-        member __.AppendTo(pipe) = appendCapture pipe parser
-    interface IPipeAppendBacktrackable<'u, 'a -> 'r, 'r> with
-        member __.AppendBacktrackLeftTo(pipe) = appendCaptureBacktrackLeft pipe parser
-        member __.AppendBacktrackRightTo(pipe) = appendCaptureBacktrackRight pipe parser
+    inherit BaseFitting<'a, 'u, 'a -> 'inp, 'a -> 'r, 'inp, 'r>(parser)
+    override __.AppendTo(pipe) = appendCapture pipe parser
+    override __.AppendBacktrackLeftTo(pipe) = appendCaptureBacktrackLeft pipe parser
+    override __.AppendBacktrackRightTo(pipe) = appendCaptureBacktrackRight pipe parser
 
 let (---) pipe (fitting : #IPipeAppendable<_, _, _>) =
     fitting.AppendTo(pipe)
@@ -140,20 +147,20 @@ let inline (~+.) x = CaptureFitting(defaultParser x)
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (--) pipe parser =
-    pipe --- (DefaultParser %!!~~% parser)
+    pipe --- ((DefaultParser %!!~~% parser) :> BaseFitting<'a, 'u, 'inp1, 'r1, 'inp2, 'r2>)
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (?-) pipe parser =
-    pipe ?-- (DefaultParser %!!~~% parser)
+    pipe ?-- ((DefaultParser %!!~~% parser) :> BaseFitting<'a, 'u, 'inp1, 'r1, 'inp2, 'r2>)
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`
 /// or `parser` fails without changing the parser state.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (-?) pipe parser =
-    pipe --? (DefaultParser %!!~~% parser)
+    pipe --? ((DefaultParser %!!~~% parser) :> BaseFitting<'a, 'u, 'inp1, 'r1, 'inp2, 'r2>)
 
 /// Creates a pipe starting with `parser`. Shorthand for `pipe -- parser`.
 let inline (~%%) parser : Pipe<_, _, _, _, _> =
