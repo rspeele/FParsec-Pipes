@@ -116,21 +116,25 @@ let inline (~+.) x = Capture (defaultParser x)
 /// Chains `parser` onto `pipe`.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
-let inline (--) pipe parser = pipe --- (DefaultParser %!!~~% parser)
+let inline (--) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) parser : Pipe<_, _, 'fn, _, 'u> =
+    pipe --- (DefaultParser %!!~~% parser)
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
-let inline (?-) pipe parser = pipe ?-- (DefaultParser %!!~~% parser)
+let inline (?-) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) parser : Pipe<_, _, 'fn, _, 'u> =
+    pipe ?-- (DefaultParser %!!~~% parser)
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`
 /// or `parser` fails without changing the parser state.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
-let inline (-?) pipe parser = pipe --? (DefaultParser %!!~~% parser)
+let inline (-?) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) parser : Pipe<_, _, 'fn, _, 'u> =
+    pipe --? (DefaultParser %!!~~% parser)
 
 /// Creates a pipe starting with `parser`. Shorthand for `pipe -- parser`.
-let inline (~%%) parser = pipe -- parser
+let inline (~%%) parser : Pipe<_, _, _, _, _> =
+    pipe -- parser
 
 /// Prefix operator equivalent to `defaultParser x`.
 let inline (~%) x = defaultParser x

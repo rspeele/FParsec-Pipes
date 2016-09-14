@@ -241,3 +241,9 @@ let (--<|) (Pipe parent) fn =
 /// This operator is rarely useful.
 let (--|>) pipe fn =
     Pipe <| (linkUp (supplyPipeFunction pipe fn) >> supplyInput)
+
+/// Provide the pipe with the function it requires to become a parser.
+/// In most cases this operator is equivalent to `-%>`.
+/// However, `-|>` is not overloaded so `pipe -|> auto` does not work.
+let (-|>) pipe fn =
+    supplyPipeFunction pipe fn

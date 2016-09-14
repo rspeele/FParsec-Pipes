@@ -23,13 +23,13 @@ We will begin with comments and whitespace.
 
 /// A line comment begins with -- and continues through the end of the line.
 let lineComment =
-    %% "--" -- restOfLine true -%> ()
+    %% "--" -- restOfLine true -|> ()
 
 /// A block comment begins with /* and continues until a trailing */ is found.
 /// Nested block comments are not allowed, so additional /* tokens found
 /// after the first are ignored.
 let blockComment =
-    %% "/*" -- skipCharsTillString "*/" true Int32.MaxValue -%> ()
+    %% "/*" -- skipCharsTillString "*/" true Int32.MaxValue -|> ()
 
 /// Where whitespace is expected, it can be one of...
 let whitespaceUnit =
@@ -62,29 +62,29 @@ described regarding allowing string literals to appear as identifier names and v
 /// A name wrapped in double quotes (standard SQL).
 let quotedName =
     let escapedQuote =
-        %% "\"\"" -%> "\"" // A pair of double quotes escapes a double quote character
+        %% "\"\"" -|> "\"" // A pair of double quotes escapes a double quote character
     let regularChars =
         many1Satisfy ((<>) '"') // Any run of non-quote characters is literal
     %% '"' -- +.([regularChars; escapedQuote] * qty.[0..]) -- '"'
-    -%> String.Concat // Glue together the parts of the string
+    -|> String.Concat // Glue together the parts of the string
 
 /// A name wrapped in square brackets (T-SQL style).
 let bracketedName =
     let escapedBracket =
-        %% "]]" -%> "]" // A pair of right brackets escapes a right bracket character
+        %% "]]" -|> "]" // A pair of right brackets escapes a right bracket character
     let regularChars =
         many1Satisfy ((<>) ']') // Any run of non-bracket characters is literal
     %% '[' -- +.([regularChars; escapedBracket] * qty.[0..]) -- ']'
-    -%> String.Concat
+    -|> String.Concat
 
 /// A name wrapped in backticks (MySQL style)
 let backtickedName =
     let escapedTick =
-        %% "``" -%> "`" // A pair of backticks escapes a backtick character
+        %% "``" -|> "`" // A pair of backticks escapes a backtick character
     let regularChars =
         many1Satisfy ((<>) '`') // Any run of non-backtick characters is literal
     %% '`' -- +.([regularChars; escapedTick] * qty.[0..]) -- '`'
-    -%> String.Concat
+    -|> String.Concat
 
 (**
 
@@ -163,11 +163,11 @@ String literals can be used as names in some places. They are similar in impleme
 
 let stringLiteral =
    (let escapedQuote =
-        %% "''" -%> "'" // A pair of single quotes escapes a single quote character
+        %% "''" -|> "'" // A pair of single quotes escapes a single quote character
     let regularChars =
         many1Satisfy ((<>) '\'') // Any run of non-quote characters is literal
     %% '\'' -- +.([regularChars; escapedQuote] * qty.[0..]) -- '\''
-    -%> String.Concat)
+    -|> String.Concat)
     <?> "string-literal"
 
 let nameOrString =
@@ -197,8 +197,8 @@ To avoid needless backtracking, we treat the second part as optional instead of 
 let objectName =
     (%% +.nameOrKeyword
     -- ws
-    -- +.(zeroOrOne * (%% '.' -- ws -? +.nameOrKeyword -- ws -%> id))
-    -%> fun name name2 ->
+    -- +.(zeroOrOne * (%% '.' -- ws -? +.nameOrKeyword -- ws -|> id))
+    -|> fun name name2 ->
         match name2 with
         | None -> { SchemaName = None; ObjectName = name }
         | Some name2 -> { SchemaName = Some name; ObjectName = name2 })
@@ -230,7 +230,7 @@ let qualifiedColumnName =
     -- ws
     -? '.'
     -- +.(qty.[0..2] / tws '.' * tws nameOrString)
-    -%> fun initial rest ->
+    -|> fun initial rest ->
         match rest.Count with
         | 0 -> { Table = None; ColumnName = initial }
         | 1 -> { Table = Some { SchemaName = None; ObjectName = initial }; ColumnName = rest.[0] }
@@ -251,7 +251,7 @@ Named parameters are prefixed by `@`, `:`, or `$`.
 let namedBindParameter =
     %% +.['@'; ':'; '$']
     -- +.unquotedNameOrKeyword
-    -%> fun prefix name -> NamedParameter (prefix, name)
+    -|> fun prefix name -> NamedParameter (prefix, name)
 
 (**
 
@@ -262,7 +262,7 @@ Positional parameters start with `?`, and may or may not contain an explicit int
 let positionalBindParameter =
     %% '?'
     -- +.(p<uint32> * zeroOrOne)
-    -%> PositionalParameter
+    -|> PositionalParameter
 
 (*
 
@@ -290,7 +290,7 @@ let kw str =
     %% ci str
     -? notFollowedByL (satisfy isFollowingIdentifierCharacter) str
     -- ws
-    -%> ()
+    -|> ()
 
 (**
 
@@ -299,16 +299,16 @@ Keyword literals are very simple to define.
 *)
 
 let nullLiteral =
-    %% kw "NULL" -%> NullLiteral
+    %% kw "NULL" -|> NullLiteral
 
 let currentTimeLiteral =
-    %% kw "CURRENT_TIME" -%> CurrentTimeLiteral
+    %% kw "CURRENT_TIME" -|> CurrentTimeLiteral
 
 let currentDateLiteral =
-    %% kw "CURRENT_DATE" -%> CurrentDateLiteral
+    %% kw "CURRENT_DATE" -|> CurrentDateLiteral
 
 let currentTimestampLiteral =
-    %% kw "CURRENT_TIMESTAMP" -%> CurrentTimestampLiteral
+    %% kw "CURRENT_TIMESTAMP" -|> CurrentTimestampLiteral
 
 (**
 
@@ -329,12 +329,12 @@ Otherwise we would get confused whenever we see a column name starting with "x".
 let blobLiteral =
     let octet =
         %% +.(2, hex)
-        -%> fun pair -> Byte.Parse(String(pair), NumberStyles.HexNumber)
+        -|> fun pair -> Byte.Parse(String(pair), NumberStyles.HexNumber)
     (%% ['x';'X']
     -? '\''
     -- +.(octet * qty.[0..])
     -- '\''
-    -%> (Seq.toArray >> BlobLiteral))
+    -|> (Seq.toArray >> BlobLiteral))
     <?> "blob-literal"
 
 (**
@@ -375,14 +375,14 @@ situations, we have a special parser for a numeric literal prefixed by an option
 let signedNumericLiteral =
     let sign =
         %[
-            %% '+' -%> 1
-            %% '-' -%> -1
+            %% '+' -|> 1
+            %% '-' -|> -1
             preturn 0
         ]
     %% +.sign
     -- ws
     -- +.numericLiteral
-    -%> fun sign value -> { Sign = sign; Value = value }
+    -|> fun sign value -> { Sign = sign; Value = value }
 
 (**
 
@@ -392,8 +392,8 @@ In expressions, any kind of literal is OK.
 
 let literal =
     %[
-        %% +.numericLiteral -%> NumericLiteral
-        %% +.stringLiteral -%> StringLiteral
+        %% +.numericLiteral -|> NumericLiteral
+        %% +.stringLiteral -|> StringLiteral
         blobLiteral
         nullLiteral
         currentTimeLiteral
@@ -422,7 +422,7 @@ let typeBounds =
     -- +.(qty.[1..2] / tws ',' * tws signedNumericLiteral)
     -- ')'
     -- ws
-    -%> fun bounds ->
+    -|> fun bounds ->
         match bounds.Count with
         | 1 -> { Low = bounds.[0]; High = None }
         | 2 -> { Low = bounds.[0]; High = Some bounds.[1] }
@@ -438,7 +438,7 @@ like `NATIONAL CHARACTER VARYING`.
 let typeName =
     (%% +.(qty.[1..] /. ws * name)
     -- +.(typeBounds * zeroOrOne)
-    -%> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds })
+    -|> fun name bounds -> { TypeName = name |> List.ofSeq; Bounds = bounds })
     <?> "type-name"
 
 (**
@@ -457,7 +457,7 @@ let cast expr =
     -- +. typeName
     -- ws
     -- ')'
-    -%> fun ex typeName -> { Expression = ex; AsType = typeName }
+    -|> fun ex typeName -> { Expression = ex; AsType = typeName }
 
 (**
 
@@ -470,10 +470,10 @@ Once again, the expression parser is required to create this parser, so it's a p
 
 let functionArguments (expr : Parser<Expr, unit>) =
     %[
-        %% '*' -- ws -%> ArgumentWildcard
-        %% +.((%% kw "DISTINCT" -- ws -%> Distinct) * zeroOrOne)
+        %% '*' -- ws -|> ArgumentWildcard
+        %% +.((%% kw "DISTINCT" -- ws -|> Distinct) * zeroOrOne)
         -- +.(qty.[0..] / tws ',' * expr)
-        -%> fun distinct args -> ArgumentList (distinct, args)
+        -|> fun distinct args -> ArgumentList (distinct, args)
     ]
 
 let functionInvocation expr =
@@ -483,7 +483,7 @@ let functionInvocation expr =
     -- ws
     -- +.functionArguments expr
     -- ')'
-    -%> fun name args -> { FunctionName = name; Arguments = args }
+    -|> fun name args -> { FunctionName = name; Arguments = args }
 
 let case expr =
     let whenClause =
@@ -495,19 +495,19 @@ let case expr =
     let elseClause =
         %% kw "ELSE"
         -- +.expr
-        -%> id
+        -|> id
     let whenForm =
         %% +.(whenClause * qty.[1..])
         -- +.(elseClause * zeroOrOne)
         -- kw "END"
-        -%> fun cases els -> { Input = None; Cases = cases; Else = els }
+        -|> fun cases els -> { Input = None; Cases = cases; Else = els }
     let ofForm =
         %% +.expr
         -- +.whenForm
-        -%> fun ofExpr case -> { case with Input = Some ofExpr }
+        -|> fun ofExpr case -> { case with Input = Some ofExpr }
     %% kw "CASE"
     -- +.[ whenForm; ofForm ]
-    -%> id
+    -|> id
 
 let private binary op e1 e2 = BinaryExpr (op, e1, e2)
 let private unary op e1 = UnaryExpr (op, e1)
@@ -517,21 +517,21 @@ let selectStmt, private selectStmtImpl = createParserForwardedToRef<SelectStmt, 
 
 let tableInvocation =
     let args =
-        %% '(' -- ws -- +.(qty.[0..] / tws ',' * expr) -- ')' -%> id
+        %% '(' -- ws -- +.(qty.[0..] / tws ',' * expr) -- ')' -|> id
     %% +.objectName
     -- ws
     -- +.(args * zeroOrOne)
-    -%> fun name args -> { Table = name; Arguments = args }
+    -|> fun name args -> { Table = name; Arguments = args }
 
 let collateOperator =
     %% kw "COLLATE"
     -- +.name
-    -%> fun collation expr -> CollateExpr (expr, collation)
+    -|> fun collation expr -> CollateExpr (expr, collation)
 
 let isOperator =
     %% kw "IS"
     -- +.(zeroOrOne * kw "NOT")
-    -%> function
+    -|> function
     | Some () -> binary IsNot
     | None -> binary Is
 
@@ -543,40 +543,40 @@ let inOperator =
             -- ws
             --
                 +.[
-                    %% +.selectStmt -%> InSelect
-                    %% +.(qty.[0..] / tws ',' * expr) -%> InExpressions
+                    %% +.selectStmt -|> InSelect
+                    %% +.(qty.[0..] / tws ',' * expr) -|> InExpressions
                 ]
             -- ')'
-            -%> id
-            %% +.tableInvocation -%> InTable
+            -|> id
+            %% +.tableInvocation -|> InTable
         ]
-    -%> function
+    -|> function
     | Some () -> fun inSet left -> NotInExpr (left, inSet)
     | None -> fun inSet left -> InExpr (left, inSet)
 
 let similarityOperator =
     %% +.(zeroOrOne * kw "NOT")
     -? +.[
-            %% kw "LIKE" -%> Like
-            %% kw "GLOB" -%> Glob
-            %% kw "MATCH" -%> Match
-            %% kw "REGEXP" -%> Regexp
+            %% kw "LIKE" -|> Like
+            %% kw "GLOB" -|> Glob
+            %% kw "MATCH" -|> Match
+            %% kw "REGEXP" -|> Regexp
         ]
-    -%> function
+    -|> function
     | Some () -> fun op left right escape -> UnaryExpr (Not, SimilarityExpr (op, left, right, escape))
     | None -> fun op left right escape -> SimilarityExpr (op, left, right, escape)
 
 let notNullOperator =
     %% [
         kw "NOTNULL"
-        %% kw "NOT" -? kw "NULL" -%> ()
+        %% kw "NOT" -? kw "NULL" -|> ()
     ]
-    -%> fun left -> BinaryExpr(IsNot, left, LiteralExpr NullLiteral)
+    -|> fun left -> BinaryExpr(IsNot, left, LiteralExpr NullLiteral)
 
 let betweenOperator =
     %% +.(zeroOrOne * kw "NOT")
     -? kw "BETWEEN"
-    -%> function
+    -|> function
     | Some () -> fun input low high -> NotBetweenExpr (input, low, high)
     | None -> fun input low high -> BetweenExpr (input, low, high)
 
@@ -585,31 +585,31 @@ let raiseTrigger =
     -- '('
     -- ws
     -- +.[
-            %% kw "IGNORE" -%> RaiseIgnore
-            %% kw "ROLLBACK" -- ',' -- ws -- +.stringLiteral -- ws -%> RaiseRollback
-            %% kw "ABORT" -- ',' -- ws -- +.stringLiteral -- ws -%> RaiseAbort
-            %% kw "FAIL" -- ',' -- ws -- +.stringLiteral -- ws -%> RaiseFail
+            %% kw "IGNORE" -|> RaiseIgnore
+            %% kw "ROLLBACK" -- ',' -- ws -- +.stringLiteral -- ws -|> RaiseRollback
+            %% kw "ABORT" -- ',' -- ws -- +.stringLiteral -- ws -|> RaiseAbort
+            %% kw "FAIL" -- ',' -- ws -- +.stringLiteral -- ws -|> RaiseFail
         ]
     -- ')'
-    -%> RaiseExpr
+    -|> RaiseExpr
 
 let term expr =
     let parenthesized =
         %[
-            %% +.selectStmt -%> ScalarSubqueryExpr
+            %% +.selectStmt -|> ScalarSubqueryExpr
             expr
         ]
     %[
-        %% '(' -- ws -- +.parenthesized -- ')' -%> id
-        %% kw "EXISTS" -- ws -- '(' -- ws -- +.selectStmt -- ')' -%> ExistsExpr
-        %% +.qualifiedColumnName -%> ColumnNameExpr
-        %% +.literal -%> LiteralExpr
-        %% +.bindParameter -%> BindParameterExpr
-        %% +.cast expr -%> CastExpr
-        %% +.case expr -%> CaseExpr
+        %% '(' -- ws -- +.parenthesized -- ')' -|> id
+        %% kw "EXISTS" -- ws -- '(' -- ws -- +.selectStmt -- ')' -|> ExistsExpr
+        %% +.qualifiedColumnName -|> ColumnNameExpr
+        %% +.literal -|> LiteralExpr
+        %% +.bindParameter -|> BindParameterExpr
+        %% +.cast expr -|> CastExpr
+        %% +.case expr -|> CaseExpr
         raiseTrigger
-        %% +.functionInvocation expr -%> FunctionInvocationExpr
-        %% +.columnName -%> ColumnNameExpr
+        %% +.functionInvocation expr -|> FunctionInvocationExpr
+        %% +.columnName -|> ColumnNameExpr
     ]
 
 let private operators = [
@@ -643,7 +643,7 @@ let private operators = [
     [
         infixl ">=" <| binary GreaterThanOrEqual
         infixl "<=" <| binary LessThanOrEqual
-        infixl (%% '<' -? notFollowedBy (skipChar '>') -%> ()) <| binary LessThan
+        infixl (%% '<' -? notFollowedBy (skipChar '>') -|> ()) <| binary LessThan
         infixl '>' <| binary GreaterThan
     ]
     [
@@ -680,7 +680,7 @@ let parenthesizedColumnNames =
     -- +.(qty.[0..] / tws ',' * tws nameOrString)
     -- ')'
     -- ws
-    -%> id
+    -|> id
 
 let commonTableExpression =
     %% +.objectName
@@ -691,87 +691,87 @@ let commonTableExpression =
     -- +.selectStmt
     -- ')'
     -- ws
-    -%> fun table cols asSelect ->
+    -|> fun table cols asSelect ->
         { Name = table; ColumnNames = cols; AsSelect = asSelect }
 
 let withClause =
     %% kw "WITH"
     -- +.(zeroOrOne * tws (kw "RECURSIVE"))
     -- +.(qty.[1..] / tws ',' * commonTableExpression)
-    -%> fun recurs ctes ->
+    -|> fun recurs ctes ->
         { Recursive = Option.isSome recurs; Tables = ctes }
 
 let asAlias =
     %% (zeroOrOne * kw "AS")
     -? +.[ name; stringLiteral ]
-    -%> id
+    -|> id
 
 let resultColumn =
     %% +.[
-        %% '*' -%> ColumnsWildcard
-        %% +.objectName -- '.' -? '*' -%> TableColumnsWildcard
-        %% +.expr -- +.(asAlias * zeroOrOne) -%> fun ex alias -> Column (ex, alias)
-    ] -- ws -%> id
+        %% '*' -|> ColumnsWildcard
+        %% +.objectName -- '.' -? '*' -|> TableColumnsWildcard
+        %% +.expr -- +.(asAlias * zeroOrOne) -|> fun ex alias -> Column (ex, alias)
+    ] -- ws -|> id
 
 let selectColumns =
     %% kw "SELECT"
     -- +.[
-            %% kw "DISTINCT" -%> Some DistinctColumns
-            %% kw "ALL" -%> Some AllColumns
+            %% kw "DISTINCT" -|> Some DistinctColumns
+            %% kw "ALL" -|> Some AllColumns
             preturn None
         ]
     -- +.(qty.[1..] / tws ',' * resultColumn)
-    -%> fun distinct cols -> { Distinct = distinct; Columns = cols }
+    -|> fun distinct cols -> { Distinct = distinct; Columns = cols }
 
 let indexHint =
     %[
-        %% kw "INDEXED" -- kw "BY" -- +.nameOrKeyword -- ws -%> IndexedBy
-        %% kw "NOT" -- kw "INDEXED" -%> NotIndexed
+        %% kw "INDEXED" -- kw "BY" -- +.nameOrKeyword -- ws -|> IndexedBy
+        %% kw "NOT" -- kw "INDEXED" -|> NotIndexed
     ]
 
 let tableOrSubquery (tableExpr : Parser<TableExpr, unit>) =
     let subterm =
         %[
-            %% +.selectStmt -%> fun select alias -> TableOrSubquery (Subquery (select, alias))
-            %% +.tableExpr -%> fun table alias -> AliasedTableExpr (table, alias)
+            %% +.selectStmt -|> fun select alias -> TableOrSubquery (Subquery (select, alias))
+            %% +.tableExpr -|> fun table alias -> AliasedTableExpr (table, alias)
         ]
     let by =
         %[
-            %% +.indexHint -%> fun indexed table -> TableOrSubquery (Table (table, None, Some indexed))
+            %% +.indexHint -|> fun indexed table -> TableOrSubquery (Table (table, None, Some indexed))
             %% +.(asAlias * zeroOrOne) -- +.(indexHint * zeroOrOne)
-                -%> fun alias indexed table -> TableOrSubquery (Table (table, alias, indexed))
+                -|> fun alias indexed table -> TableOrSubquery (Table (table, alias, indexed))
         ]
 
     %[
-        %% +.tableInvocation -- +.by -%> fun table by -> by table
-        %% '(' -- ws -- +.subterm -- ')' -- ws -- +.(asAlias * zeroOrOne) -%> (<|)
+        %% +.tableInvocation -- +.by -|> fun table by -> by table
+        %% '(' -- ws -- +.subterm -- ')' -- ws -- +.(asAlias * zeroOrOne) -|> (<|)
     ]
 
 let joinType =
     %[
-        %% kw "LEFT" -- (tws (kw "OUTER") * zeroOrOne) -%> LeftOuter
-        %% kw "INNER" -%> Inner
-        %% kw "CROSS" -%> Cross
-        %% ws -%> Inner
+        %% kw "LEFT" -- (tws (kw "OUTER") * zeroOrOne) -|> LeftOuter
+        %% kw "INNER" -|> Inner
+        %% kw "CROSS" -|> Cross
+        %% ws -|> Inner
     ]
 
 let joinConstraint =
     %[
-        %% kw "ON" -- +.expr -- ws -%> JoinOn
+        %% kw "ON" -- +.expr -- ws -|> JoinOn
         %% kw "USING" -- '(' -- ws -- +.(qty.[1..] / tws ',' * columnName) -- ')' -- ws
-            -%> fun cols -> JoinUsing (List.ofSeq cols)
+            -|> fun cols -> JoinUsing (List.ofSeq cols)
         preturn JoinUnconstrained
     ]
 
 let tableExpr =
     precursive <| fun tableExpr ->
         let term = tableOrSubquery tableExpr 
-        let natural = %% kw "NATURAL" -%> ()   
+        let natural = %% kw "NATURAL" -|> ()   
         let join =
             %% +.[
-                    %% ',' -%> fun left right constr -> Join (Inner, left, right, constr)
+                    %% ',' -|> fun left right constr -> Join (Inner, left, right, constr)
                     %% +.(natural * zeroOrOne) -- +.joinType -- kw "JOIN"
-                        -%> fun natural join left right constr ->
+                        -|> fun natural join left right constr ->
                             let joinType = if Option.isSome natural then Natural join else join
                             Join (joinType, left, right, constr)
                 ]
@@ -779,11 +779,11 @@ let tableExpr =
             -- +.term
             -- ws
             -- +.joinConstraint
-            -%> fun f joinTo joinOn left -> f left joinTo joinOn
+            -|> fun f joinTo joinOn left -> f left joinTo joinOn
         %% +.term
         -- ws
         -- +.(join * qty.[0..])
-        -%> Seq.fold (|>)
+        -|> Seq.fold (|>)
 
 let valuesClause =
     let valuesRow =
@@ -792,42 +792,42 @@ let valuesClause =
         -- +.(qty.[0..] / tws ',' * expr)
         -- ')'
         -- ws
-        -%> id
+        -|> id
 
     %% kw "VALUES"
     -- ws
     -- +.(qty.[1..] / tws ',' * valuesRow)
     -- ws
-    -%> id
+    -|> id
 
 let fromClause =
     %% kw "FROM"
     -- +.tableExpr
-    -%> id
+    -|> id
 
 let whereClause =
     %% kw "WHERE"
     -- +.expr
-    -%> id
+    -|> id
 
 let havingClause =
     %% kw "HAVING"
     -- +.expr
-    -%> id
+    -|> id
 
 let groupByClause =
     %% kw "GROUP"
     -- kw "BY"
     -- +.(qty.[1..] / tws ',' * expr)
     -- +.(zeroOrOne * havingClause)
-    -%> fun by having -> { By = by; Having = having }
+    -|> fun by having -> { By = by; Having = having }
 
 let selectCore =
     %% +.selectColumns
     -- +.(fromClause * zeroOrOne)
     -- +.(whereClause * zeroOrOne)
     -- +.(groupByClause * zeroOrOne)
-    -%> fun cols table where groupBy ->
+    -|> fun cols table where groupBy ->
         {
             Columns = cols
             From = table
@@ -837,31 +837,31 @@ let selectCore =
 
 let compoundTerm =
     %[
-        %% +.valuesClause -%> Values
-        %% +.selectCore -%> Select
+        %% +.valuesClause -|> Values
+        %% +.selectCore -|> Select
     ]
 
 let compoundExpr =
     let compoundOperation =
         %[
-            %% kw "UNION" -- +.(zeroOrOne * kw "ALL") -%> function
+            %% kw "UNION" -- +.(zeroOrOne * kw "ALL") -|> function
                 | Some () -> fun left right -> UnionAll (left, right)
                 | None -> fun left right -> Union (left, right)
-            %% kw "INTERSECT" -%> fun left right -> Intersect (left, right)
-            %% kw "EXCEPT" -%> fun left right -> Except (left, right)
+            %% kw "INTERSECT" -|> fun left right -> Intersect (left, right)
+            %% kw "EXCEPT" -|> fun left right -> Except (left, right)
         ]
     let compoundNext =
         %% +.compoundOperation
         -- +.compoundTerm
-        -%> fun f right left -> f left right
+        -|> fun f right left -> f left right
     %% +.(compoundTerm |>> CompoundTerm)
     -- +.(compoundNext * qty.[0..])
-    -%> Seq.fold (|>)
+    -|> Seq.fold (|>)
 
 let orderDirection =
     %[
-        %% kw "DESC" -%> Descending
-        %% kw "ASC" -%> Ascending
+        %% kw "DESC" -|> Descending
+        %% kw "ASC" -|> Ascending
         preturn Ascending
     ]
 
@@ -869,23 +869,23 @@ let orderingTerm =
     %% +.expr
     -- +.orderDirection
     -- ws
-    -%> fun expr dir -> { By = expr; Direction = dir }
+    -|> fun expr dir -> { By = expr; Direction = dir }
 
 let orderBy =
     %% kw "ORDER"
     -- kw "BY"
     -- +.(qty.[1..] / tws ',' * orderingTerm)
-    -%> id
+    -|> id
 
 let limit =
     let offset =
-        %% [%% ',' -- ws -%> (); kw "OFFSET"]
+        %% [%% ',' -- ws -|> (); kw "OFFSET"]
         -- +.expr
-        -%> id
+        -|> id
     %% kw "LIMIT"
     -- +.expr
     -- +.(zeroOrOne * offset)
-    -%> fun limit offset -> { Limit = limit; Offset = offset }
+    -|> fun limit offset -> { Limit = limit; Offset = offset }
 
 do
     selectStmtImpl :=
@@ -894,7 +894,7 @@ do
             -? +.compoundExpr
             -- +.(zeroOrOne * orderBy)
             -- +.(zeroOrOne * limit)
-            -%> fun cte comp orderBy limit ->
+            -|> fun cte comp orderBy limit ->
                 {
                     With = cte
                     Compound = comp
@@ -905,48 +905,48 @@ do
 
 let conflictClause =
     let onConflict =
-        %% kw "ON" -- kw "CONFLICT" -%> ()
+        %% kw "ON" -- kw "CONFLICT" -|> ()
     let clause =
         %% (onConflict * zeroOrOne)
         -- +.[
-                %% kw "ROLLBACK" -%> Rollback
-                %% kw "ABORT" -%> Abort
-                %% kw "FAIL" -%> Fail
-                %% kw "IGNORE" -%> Ignore
-                %% kw "REPLACE" -%> Replace
+                %% kw "ROLLBACK" -|> Rollback
+                %% kw "ABORT" -|> Abort
+                %% kw "FAIL" -|> Fail
+                %% kw "IGNORE" -|> Ignore
+                %% kw "REPLACE" -|> Replace
             ]
-        -%> id
+        -|> id
     zeroOrOne * clause
 
 let foreignKeyRule =
     let eventRule =
         %% kw "ON"
         -- +.[
-                %% kw "DELETE" -%> OnDelete
-                %% kw "UPDATE" -%> OnUpdate
+                %% kw "DELETE" -|> OnDelete
+                %% kw "UPDATE" -|> OnUpdate
             ]
         -- +.[
-                %% kw "SET" -- +.[ %% kw "NULL" -%> SetNull; %% kw "DEFAULT" -%> SetDefault ] -%> id
-                %% kw "CASCADE" -%> Cascade
-                %% kw "RESTRICT" -%> Restrict
-                %% kw "NO" -- kw "ACTION" -%> NoAction
+                %% kw "SET" -- +.[ %% kw "NULL" -|> SetNull; %% kw "DEFAULT" -|> SetDefault ] -|> id
+                %% kw "CASCADE" -|> Cascade
+                %% kw "RESTRICT" -|> Restrict
+                %% kw "NO" -- kw "ACTION" -|> NoAction
             ]
-        -%> fun evt handler -> EventRule (evt, handler)
+        -|> fun evt handler -> EventRule (evt, handler)
     let matchRule =
         %% kw "MATCH"
         -- +.name
         -- ws
-        -%> MatchRule
+        -|> MatchRule
     %[ eventRule; matchRule ]
 
 
 let foreignKeyDeferClause =
     let initially =
-        %% kw "INITIALLY" -- +.[ %% kw "DEFERRED" -%> true; %% kw "IMMEDIATE" -%> false ] -%> id
+        %% kw "INITIALLY" -- +.[ %% kw "DEFERRED" -|> true; %% kw "IMMEDIATE" -|> false ] -|> id
     %% +.(zeroOrOne * kw "NOT")
     -? kw "DEFERRABLE"
     -- +.(zeroOrOne * initially)
-    -%> fun not init -> { Deferrable = Option.isNone not; InitiallyDeferred = init }
+    -|> fun not init -> { Deferrable = Option.isNone not; InitiallyDeferred = init }
 
 let foreignKeyClause =
     %% kw "REFERENCES"
@@ -954,7 +954,7 @@ let foreignKeyClause =
     -- +.(zeroOrOne * parenthesizedColumnNames)
     -- +.(qty.[0..] * foreignKeyRule)
     -- +.(zeroOrOne * foreignKeyDeferClause)
-    -%> fun table cols rules defer ->
+    -|> fun table cols rules defer ->
         {
             ReferencesTable = table
             ReferencesColumns = cols
@@ -966,7 +966,7 @@ let constraintName =
     %% kw "CONSTRAINT"
     -- +.name
     -- ws
-    -%> id
+    -|> id
 
 let primaryKeyClause =
     %% kw "PRIMARY"
@@ -975,7 +975,7 @@ let primaryKeyClause =
     -- ws
     -- +.conflictClause
     -- +.(zeroOrOne * tws (kw "AUTOINCREMENT"))
-    -%> fun dir conflict auto ->
+    -|> fun dir conflict auto ->
         {
             Order = dir
             ConflictClause = conflict
@@ -989,35 +989,35 @@ let constraintType =
         else expr
     let defaultValue =
         %[
-            %% +.signedNumericLiteral -%> signedToExpr
-            %% +.literal -%> LiteralExpr
-            %% '(' -- ws -- +.expr -- ')' -%> id
+            %% +.signedNumericLiteral -|> signedToExpr
+            %% +.literal -|> LiteralExpr
+            %% '(' -- ws -- +.expr -- ')' -|> id
             // docs don't mention this, but it works
-            %% +.name -%> (StringLiteral >> LiteralExpr)
+            %% +.name -|> (StringLiteral >> LiteralExpr)
         ]
     %[
-        %% +.primaryKeyClause -%> PrimaryKeyConstraint
-        %% kw "NOT"  -- kw "NULL" -- +.conflictClause -%> NotNullConstraint
-        %% kw "NULL" -%> NullableConstraint
-        %% kw "UNIQUE" -- +.conflictClause -%> UniqueConstraint
-        %% kw "CHECK" -- '(' -- ws -- +.expr -- ')' -%> CheckConstraint
-        %% kw "DEFAULT" -- +.defaultValue -%> DefaultConstraint
-        %% kw "COLLATE" -- +.name -%> CollateConstraint
-        %% +.foreignKeyClause -%> ForeignKeyConstraint
+        %% +.primaryKeyClause -|> PrimaryKeyConstraint
+        %% kw "NOT"  -- kw "NULL" -- +.conflictClause -|> NotNullConstraint
+        %% kw "NULL" -|> NullableConstraint
+        %% kw "UNIQUE" -- +.conflictClause -|> UniqueConstraint
+        %% kw "CHECK" -- '(' -- ws -- +.expr -- ')' -|> CheckConstraint
+        %% kw "DEFAULT" -- +.defaultValue -|> DefaultConstraint
+        %% kw "COLLATE" -- +.name -|> CollateConstraint
+        %% +.foreignKeyClause -|> ForeignKeyConstraint
     ]
 
 let columnConstraint =
     %% +.(zeroOrOne * constraintName)
     -- +.constraintType
     -- ws
-    -%> fun name cty -> { Name = name; ColumnConstraintType = cty }
+    -|> fun name cty -> { Name = name; ColumnConstraintType = cty }
 
 let columnDef =
     %% +.nameOrKeyword
     -- ws
     -- +.(typeName * zeroOrOne)
     -- +.(columnConstraint * qty.[0..])
-    -%> fun name typeName constraints ->
+    -|> fun name typeName constraints ->
         {
             Name = name
             Type = typeName
@@ -1029,22 +1029,22 @@ let alterTableStmt =
         %% kw "RENAME"
         -- kw "TO"
         -- +.name
-        -%> RenameTo
+        -|> RenameTo
     let addColumn =
         %% kw "ADD"
         -- zeroOrOne * kw "COLUMN"
         -- +.columnDef
-        -%> AddColumn
+        -|> AddColumn
     %% kw "ALTER"
     -- kw "TABLE"
     -- +.objectName
     -- +.[ renameTo; addColumn ]
-    -%> fun table alteration -> { Table = table; Alteration = alteration }
+    -|> fun table alteration -> { Table = table; Alteration = alteration }
 
 let tableIndexConstraintType =
     %[
-        %% kw "PRIMARY" -- kw "KEY" -%> PrimaryKey
-        %% kw "UNIQUE" -%> Unique
+        %% kw "PRIMARY" -- kw "KEY" -|> PrimaryKey
+        %% kw "UNIQUE" -|> Unique
     ]
 
 let indexedColumns =
@@ -1053,13 +1053,13 @@ let indexedColumns =
     -- +.(qty.[1..] / tws ',' * (%% +.expr -- +.orderDirection -%> auto))
     -- ')'
     -- ws
-    -%> id
+    -|> id
 
 let tableIndexConstraint =
     %% +.tableIndexConstraintType
     -- +.indexedColumns
     -- +.conflictClause
-    -%> fun cty cols conflict ->
+    -|> fun cty cols conflict ->
         { Type = cty; IndexedColumns = cols; ConflictClause = conflict }
 
 let tableConstraintType =
@@ -1068,32 +1068,32 @@ let tableConstraintType =
         -- kw "KEY"
         -- +.parenthesizedColumnNames
         -- +.foreignKeyClause
-        -%> fun columns fk -> TableForeignKeyConstraint (columns, fk)
+        -|> fun columns fk -> TableForeignKeyConstraint (columns, fk)
     %[
-        %% kw "CHECK" -- '(' -- ws -- +.expr -- ')' -%> TableCheckConstraint
+        %% kw "CHECK" -- '(' -- ws -- +.expr -- ')' -|> TableCheckConstraint
         foreignKey
-        %% +.tableIndexConstraint -%> TableIndexConstraint
+        %% +.tableIndexConstraint -|> TableIndexConstraint
     ]
 
 let tableConstraint =
     %% +.(zeroOrOne * constraintName)
     -- +.tableConstraintType
     -- ws
-    -%> fun name cty -> { Name = name; TableConstraintType = cty }
+    -|> fun name cty -> { Name = name; TableConstraintType = cty }
 
 let createTableDefinition =
     let part =
         %[
-            %% +.tableConstraint -%> Choice1Of2
-            %% +.columnDef -%> Choice2Of2
+            %% +.tableConstraint -|> Choice1Of2
+            %% +.columnDef -|> Choice2Of2
         ]
     %% '('
     -- ws
     -- +.(qty.[0..] /. tws ',' * part)
     -- ')'
     -- ws
-    -- +.(zeroOrOne * (%% kw "WITHOUT" -- kw "ROWID" -- ws -%> ()))
-    -%> fun parts without ->
+    -- +.(zeroOrOne * (%% kw "WITHOUT" -- kw "ROWID" -- ws -|> ()))
+    -|> fun parts without ->
         {
             Columns =
                 parts |> Seq.choose (function | Choice2Of2 cdef -> Some cdef | Choice1Of2 _ -> None) |> ResizeArray
@@ -1104,11 +1104,11 @@ let createTableDefinition =
 
 let createTableAs =
     %[
-        %% kw "AS" -- +.selectStmt -%> CreateAsSelect
-        %% +.createTableDefinition -%> CreateAsDefinition
+        %% kw "AS" -- +.selectStmt -|> CreateAsSelect
+        %% +.createTableDefinition -|> CreateAsDefinition
     ]
 
-let ifNotExists = %(zeroOrOne * (%% kw "IF" -- kw "NOT" -- kw "EXISTS" -%> ()))
+let ifNotExists = %(zeroOrOne * (%% kw "IF" -- kw "NOT" -- kw "EXISTS" -|> ()))
 
 let temporary = %(zeroOrOne * [kw "TEMPORARY"; kw "TEMP"])
         
@@ -1119,7 +1119,7 @@ let createTableStmt =
     -- +.ifNotExists
     -- +.objectName
     -- +.createTableAs
-    -%> fun temp ifNotExists name createAs ->
+    -|> fun temp ifNotExists name createAs ->
         {
             Temporary = Option.isSome temp
             IfNotExists = Option.isSome ifNotExists
@@ -1130,7 +1130,7 @@ let createTableStmt =
 let analyzeStmt =
     %% kw "ANALYZE"
     -- +.(zeroOrOne * objectName)
-    -%> id
+    -|> id
 
 let attachStmt =
     %% kw "ATTACH"
@@ -1138,13 +1138,13 @@ let attachStmt =
     -- +.expr
     -- kw "AS"
     -- +.nameOrKeyword
-    -%> fun ex schemaName -> ex, schemaName
+    -|> fun ex schemaName -> ex, schemaName
 
 let transactionType =
     %[
-        %% kw "DEFERRED" -%> Deferred
-        %% kw "IMMEDIATE" -%> Immediate
-        %% kw "EXCLUSIVE" -%> Exclusive
+        %% kw "DEFERRED" -|> Deferred
+        %% kw "IMMEDIATE" -|> Immediate
+        %% kw "EXCLUSIVE" -|> Exclusive
         preturn Deferred
     ]
 
@@ -1153,21 +1153,21 @@ let beginStmt =
     -- +.transactionType
     -- zeroOrOne * kw "TRANSACTION"
     -- zeroOrOne * nameOrString // optional ignored name
-    -%> BeginStmt
+    -|> BeginStmt
 
 let commitStmt =
     %% [ kw "COMMIT"; kw "END" ]
     -- zeroOrOne * kw "TRANSACTION"
-    -%> CommitStmt
+    -|> CommitStmt
 
 let rollbackStmt =
     let toPoint =
         %% kw "TO"
         -- zeroOrOne * kw "SAVEPOINT"
         -- +.name
-        -%> RollbackToSavepoint
+        -|> RollbackToSavepoint
     let tx =
-        %% +.nameOrString -%> RollbackTransactionByName
+        %% +.nameOrString -|> RollbackTransactionByName
     %% kw "ROLLBACK"
     -- zeroOrOne * kw "TRANSACTION"
     -- +.[
@@ -1175,7 +1175,7 @@ let rollbackStmt =
             tx
             preturn RollbackTransaction
         ]
-    -%> RollbackStmt
+    -|> RollbackStmt
 
 let createIndexStmt =
     %% kw "CREATE"
@@ -1186,8 +1186,8 @@ let createIndexStmt =
     -- kw "ON"
     -- +.objectName
     -- +.indexedColumns
-    -- +.(zeroOrOne * (%% kw "WHERE" -- +.expr -%> id))
-    -%> fun unique ifNotExists indexName tableName cols whereExpr ->
+    -- +.(zeroOrOne * (%% kw "WHERE" -- +.expr -|> id))
+    -|> fun unique ifNotExists indexName tableName cols whereExpr ->
         {
             Unique = Option.isSome unique
             IfNotExists = Option.isSome ifNotExists
@@ -1200,7 +1200,7 @@ let createIndexStmt =
 let qualifiedTableName =
     %% +.objectName
     -- +.(zeroOrOne * indexHint)
-    -%> fun tableName hint ->
+    -|> fun tableName hint ->
         {
             TableName = tableName
             IndexHint = hint
@@ -1214,7 +1214,7 @@ let deleteStmt =
     -- +.(zeroOrOne * whereClause)
     -- +.(zeroOrOne * orderBy)
     -- +.(zeroOrOne * limit)
-    -%> fun withClause fromTable where orderBy limit ->
+    -|> fun withClause fromTable where orderBy limit ->
         {
             With = withClause
             DeleteFrom = fromTable
@@ -1226,13 +1226,13 @@ let deleteStmt =
 let updateOr =
     %% kw "OR"
     -- +.[
-            %% kw "ROLLBACK" -%> UpdateOrRollback
-            %% kw "ABORT" -%> UpdateOrAbort
-            %% kw "REPLACE" -%> UpdateOrReplace
-            %% kw "FAIL" -%> UpdateOrFail
-            %% kw "IGNORE" -%> UpdateOrIgnore
+            %% kw "ROLLBACK" -|> UpdateOrRollback
+            %% kw "ABORT" -|> UpdateOrAbort
+            %% kw "REPLACE" -|> UpdateOrReplace
+            %% kw "FAIL" -|> UpdateOrFail
+            %% kw "IGNORE" -|> UpdateOrIgnore
         ]
-    -%> id
+    -|> id
 
 let updateStmt =
     let setColumn =
@@ -1241,7 +1241,7 @@ let updateStmt =
         -- '='
         -- ws
         -- +.expr
-        -%> fun name expr -> name, expr
+        -|> fun name expr -> name, expr
     %% +.(zeroOrOne * withClause)
     -? kw "UPDATE"
     -- +.(zeroOrOne * updateOr)
@@ -1251,7 +1251,7 @@ let updateStmt =
     -- +.(zeroOrOne * whereClause)
     -- +.(zeroOrOne * orderBy)
     -- +.(zeroOrOne * limit)
-    -%> fun withClause updateOr table sets where orderBy limit ->
+    -|> fun withClause updateOr table sets where orderBy limit ->
         {
             With = withClause
             UpdateTable = table
@@ -1266,16 +1266,16 @@ let insertOr =
     let orPart =
         %% kw "OR"
         -- +.[
-                %% kw "REPLACE" -%> InsertOrReplace
-                %% kw "ROLLBACK" -%> InsertOrRollback
-                %% kw "ABORT" -%> InsertOrAbort
-                %% kw "FAIL" -%> InsertOrFail
-                %% kw "IGNORE" -%> InsertOrIgnore
+                %% kw "REPLACE" -|> InsertOrReplace
+                %% kw "ROLLBACK" -|> InsertOrRollback
+                %% kw "ABORT" -|> InsertOrAbort
+                %% kw "FAIL" -|> InsertOrFail
+                %% kw "IGNORE" -|> InsertOrIgnore
             ]
-        -%> id
+        -|> id
     %[
-        %% kw "REPLACE" -%> Some InsertOrReplace
-        %% kw "INSERT" -- +.(zeroOrOne * orPart) -%> id
+        %% kw "REPLACE" -|> Some InsertOrReplace
+        %% kw "INSERT" -- +.(zeroOrOne * orPart) -|> id
     ]
 
 let insertStmt =
@@ -1285,10 +1285,10 @@ let insertStmt =
     -- +.objectName
     -- +.(zeroOrOne * parenthesizedColumnNames)
     -- +.[
-            %% kw "DEFAULT" -- kw "VALUES" -%> None
-            %% +.selectStmt -%> Some
+            %% kw "DEFAULT" -- kw "VALUES" -|> None
+            %% +.selectStmt -|> Some
         ]
-    -%> fun withClause insert table cols data ->
+    -|> fun withClause insert table cols data ->
         {
             With = withClause
             Or = insert
@@ -1299,34 +1299,34 @@ let insertStmt =
 
 let triggerSchedule =
     %[
-        %% kw "BEFORE" -%> Before
-        %% kw "AFTER" -%> After
-        %% kw "INSTEAD" -- kw "OF" -%> InsteadOf
+        %% kw "BEFORE" -|> Before
+        %% kw "AFTER" -|> After
+        %% kw "INSTEAD" -- kw "OF" -|> InsteadOf
         preturn Before
     ]
 
 let triggerCause =
     let updateColumns =
-        %% kw "OF" -- +.(qty.[1..] / tws ',' * tws name) -%> id
+        %% kw "OF" -- +.(qty.[1..] / tws ',' * tws name) -|> id
     %[
-        %% kw "DELETE" -%> DeleteOn
-        %% kw "INSERT" -%> InsertOn
-        %% kw "UPDATE" -- +.(zeroOrOne * updateColumns) -%> UpdateOn
+        %% kw "DELETE" -|> DeleteOn
+        %% kw "INSERT" -|> InsertOn
+        %% kw "UPDATE" -- +.(zeroOrOne * updateColumns) -|> UpdateOn
     ]
 
 let triggerAction =
     %[
-        %% +.selectStmt -%> TriggerSelect
-        %% +.deleteStmt -%> TriggerDelete
-        %% +.updateStmt -%> TriggerUpdate
-        %% +.insertStmt -%> TriggerInsert
+        %% +.selectStmt -|> TriggerSelect
+        %% +.deleteStmt -|> TriggerDelete
+        %% +.updateStmt -|> TriggerUpdate
+        %% +.insertStmt -|> TriggerInsert
     ]
 
 let createTriggerStmt =
     let whenClause =
         %% kw "WHEN"
         -- +.expr
-        -%> id
+        -|> id
     %% kw "CREATE"
     -- +.temporary
     -? kw "TRIGGER"
@@ -1336,12 +1336,12 @@ let createTriggerStmt =
     -- +.triggerCause
     -- kw "ON"
     -- +.objectName
-    -- zeroOrOne * (%% kw "FOR" -- kw "EACH" -- kw "ROW" -%> ())
+    -- zeroOrOne * (%% kw "FOR" -- kw "EACH" -- kw "ROW" -|> ())
     -- +.(zeroOrOne * whenClause)
     -- kw "BEGIN"
     -- +.(qty.[1..] /. tws ';' * tws triggerAction)
     -- kw "END"
-    -%> fun temp ifne triggerName schedule cause tableName whenClause actions ->
+    -|> fun temp ifne triggerName schedule cause tableName whenClause actions ->
         {
             Temporary = Option.isSome temp
             IfNotExists = Option.isSome ifne
@@ -1362,7 +1362,7 @@ let createViewStmt =
     -- +.(zeroOrOne * parenthesizedColumnNames)
     -- kw "AS"
     -- +.selectStmt
-    -%> fun temp ifNotExists viewName cols asSelect ->
+    -|> fun temp ifNotExists viewName cols asSelect ->
         {
             Temporary = Option.isSome temp
             IfNotExists = Option.isSome ifNotExists
@@ -1382,7 +1382,7 @@ let createVirtualTableStmt =
             %% '('
             -- +.manyStrings chunk
             -- ')'
-            -%> fun s -> "(" + s + ")"
+            -|> fun s -> "(" + s + ")"
     let moduleArgument =
         let chunk = moduleArgumentNest <|> moduleArgumentTopChunk
         manyStrings chunk
@@ -1391,7 +1391,7 @@ let createVirtualTableStmt =
         -- ws
         -- +.(qty.[0..] / ',' * moduleArgument)
         -- ')'
-        -%> id
+        -|> id
     %% kw "CREATE"
     -? kw "VIRTUAL"
     -- kw "TABLE"
@@ -1401,7 +1401,7 @@ let createVirtualTableStmt =
     -- +.name
     -- ws
     -- +.(zeroOrOne * moduleArguments)
-    -%> fun ifNotExists vTableName usingModule withArgs ->
+    -|> fun ifNotExists vTableName usingModule withArgs ->
         {
             IfNotExists = Option.isSome ifNotExists
             VirtualTable = vTableName
@@ -1413,20 +1413,20 @@ let detachStmt =
     %% kw "DETACH"
     -- zeroOrOne * kw "DATABASE"
     -- +.nameOrKeyword
-    -%> DetachStmt
+    -|> DetachStmt
 
 let ifExists =
     %[
-        %% kw "IF" -- kw "EXISTS" -%> true
+        %% kw "IF" -- kw "EXISTS" -|> true
         preturn false
     ]
 
 let dropObjectType =
     %[
-        %% kw "INDEX" -%> DropIndex
-        %% kw "TABLE" -%> DropTable
-        %% kw "TRIGGER" -%> DropTrigger
-        %% kw "VIEW" -%> DropView
+        %% kw "INDEX" -|> DropIndex
+        %% kw "TABLE" -|> DropTable
+        %% kw "TRIGGER" -|> DropTrigger
+        %% kw "VIEW" -|> DropView
     ]
 
 let dropObjectStmt =
@@ -1434,25 +1434,25 @@ let dropObjectStmt =
     -? +.dropObjectType
     -- +.ifExists
     -- +.objectName
-    -%> fun dropType ifExists name ->
+    -|> fun dropType ifExists name ->
         { Drop = dropType; IfExists = ifExists; IndexName = name }
 
 let pragmaValue =
     let interiorValue =
         %[
-            %% +.nameOrKeyword -%> StringPragmaValue
-            %% +.signedNumericLiteral -%> NumericPragmaValue
+            %% +.nameOrKeyword -|> StringPragmaValue
+            %% +.signedNumericLiteral -|> NumericPragmaValue
         ]
     %[
-        %% '(' -- ws -- +.interiorValue -- ws -- ')' -%> id
-        %% '=' -- ws -- +.interiorValue -%> id
+        %% '(' -- ws -- +.interiorValue -- ws -- ')' -|> id
+        %% '=' -- ws -- +.interiorValue -|> id
     ]
 
 let pragmaStmt =
     %% kw "PRAGMA"
     -- +.objectName
     -- +.(zeroOrOne * pragmaValue)
-    -%> fun name value ->
+    -|> fun name value ->
         {
             Pragma = name
             Value = value
@@ -1461,61 +1461,61 @@ let pragmaStmt =
 let reindexStmt =
     %% kw "REINDEX"
     -- +.(zeroOrOne * objectName)
-    -%> ReindexStmt
+    -|> ReindexStmt
 
 let releaseStmt =
     %% kw "RELEASE"
     -- zeroOrOne * kw "SAVEPOINT"
     -- +.name
-    -%> ReleaseStmt
+    -|> ReleaseStmt
 
 let savepointStmt =
     %% kw "SAVEPOINT"
     -- +.name
-    -%> SavepointStmt
+    -|> SavepointStmt
 
 let vacuumStmt =
     %% kw "VACUUM"
-    -%> VacuumStmt
+    -|> VacuumStmt
 
 let private almostAnyStmt =
     %[
-        %% +.alterTableStmt -%> AlterTableStmt
-        %% +.analyzeStmt -%> AnalyzeStmt
-        %% +.attachStmt -%> AttachStmt
+        %% +.alterTableStmt -|> AlterTableStmt
+        %% +.analyzeStmt -|> AnalyzeStmt
+        %% +.attachStmt -|> AttachStmt
         beginStmt
         commitStmt
-        %% +.createIndexStmt -%> CreateIndexStmt
-        %% +.createTableStmt -%> CreateTableStmt
-        %% +.createTriggerStmt -%> CreateTriggerStmt
-        %% +.createViewStmt -%> CreateViewStmt
-        %% +.createVirtualTableStmt -%> CreateVirtualTableStmt
-        %% +.deleteStmt -%> DeleteStmt
+        %% +.createIndexStmt -|> CreateIndexStmt
+        %% +.createTableStmt -|> CreateTableStmt
+        %% +.createTriggerStmt -|> CreateTriggerStmt
+        %% +.createViewStmt -|> CreateViewStmt
+        %% +.createVirtualTableStmt -|> CreateVirtualTableStmt
+        %% +.deleteStmt -|> DeleteStmt
         detachStmt
-        %% +.dropObjectStmt -%> DropObjectStmt
-        %% +.insertStmt -%> InsertStmt
-        %% +.pragmaStmt -%> PragmaStmt
+        %% +.dropObjectStmt -|> DropObjectStmt
+        %% +.insertStmt -|> InsertStmt
+        %% +.pragmaStmt -|> PragmaStmt
         reindexStmt
         releaseStmt
         rollbackStmt
         savepointStmt
-        %% +.selectStmt -%> SelectStmt
-        %% +.updateStmt -%> UpdateStmt
+        %% +.selectStmt -|> SelectStmt
+        %% +.updateStmt -|> UpdateStmt
         vacuumStmt
     ]
 
 let explainStmt =
     %% kw "EXPLAIN"
-    -- (zeroOrOne * (%% kw "QUERY" -- kw "PLAN" -%> ()))
+    -- (zeroOrOne * (%% kw "QUERY" -- kw "PLAN" -|> ()))
     -- +.almostAnyStmt
-    -%> ExplainStmt
+    -|> ExplainStmt
 
 let anyStmt = %[ explainStmt; almostAnyStmt ]
 
 let private stmtsAtLeast min =
     %% ws
     -- +.(qty.[min..] /. tws ';' * tws anyStmt)
-    -%> List.ofSeq
+    -|> List.ofSeq
 
 let stmts = stmtsAtLeast 0
 let stmts1 = stmtsAtLeast 1
