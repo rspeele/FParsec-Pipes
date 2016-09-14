@@ -48,48 +48,55 @@ let inline (--?) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, '
     (^app : (member AppendBacktrackRight : Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
         (fitting.Appendable, pipe))
 
+type DefaultFitting =
+    | DefaultFitting
+    static member inline (%!!&&%) (DefaultFitting, parser : Parser<_, _>) =
+        IgnoreFitting(parser) :> Fitting<_, _, _>
+    static member inline (%!!&&%) (DefaultFitting, fitting : Fitting<_, _, _>) =
+        fitting
+
 [<AllowNullLiteral>]
 type DefaultParserOf<'a>() =
     class end
 and [<AllowNullLiteral>]
     CustomDefaultParserOf< ^a when ^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >) >() =
         static member inline (%!!~~%) (DefaultParser, _ : CustomDefaultParserOf< ^a >) =
-            (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)()) |> IgnoreFitting
+            (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)())
 and DefaultParser =
     | DefaultParser
     static member inline (%!!~~%) (DefaultParser, cap : Fitting<_, _, _>) = cap
 
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u> seq) = choice existing |> IgnoreFitting
+    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing
+    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u> seq) = choice existing
 
-    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate |> IgnoreFitting
+    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal
+    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal 
+    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate 
 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : char list) =
-        anyOf anyOfThese |> IgnoreFitting
+        anyOf anyOfThese 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : string list) =
-        choice (List.map pstring anyOfThese) |> IgnoreFitting
+        choice (List.map pstring anyOfThese) 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<char> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) |> IgnoreFitting
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<string> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) |> IgnoreFitting
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) 
 
-    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser |> IgnoreFitting
+    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser 
 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 |> IgnoreFitting
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition |> IgnoreFitting
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition 
 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^a >) =
         DefaultParser %!!~~% (null : CustomDefaultParserOf< ^a >)
@@ -103,8 +110,10 @@ let p<'a> = null : DefaultParserOf<'a>
 /// Create a parser from `x`, if there is a single sensible parser possible.
 /// For example, `defaultParser "str"` is equivalent to `pstring str`.
 let inline defaultParser x =
-    let fitting : IgnoreFitting<'a, 'u> = DefaultParser %!!~~% x
-    fitting.Parser
+    DefaultParser %!!~~% x : Parser<_, _>
+
+let inline defaultFitting x =
+    DefaultFitting %!!&&% (DefaultParser %!!~~% x) : Fitting<_, _, _>
 
 /// Converts its argument to a parser via `defaultParser` and
 /// marks the result as a captured input, which can be consumed
@@ -115,20 +124,20 @@ let inline (~+.) x = CaptureFitting(defaultParser x)
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (--) pipe parser =
-    pipe --- (DefaultParser %!!~~% parser)
+    pipe --- defaultFitting parser
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (?-) pipe parser =
-    pipe ?-- (DefaultParser %!!~~% parser)
+    pipe ?-- defaultFitting parser
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`
 /// or `parser` fails without changing the parser state.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
 let inline (-?) pipe parser =
-    pipe --? (DefaultParser %!!~~% parser)
+    pipe --? defaultFitting parser
 
 /// Creates a pipe starting with `parser`. Shorthand for `pipe -- parser`.
 let inline (~%%) parser : Pipe<_, _, _, _, _> =
