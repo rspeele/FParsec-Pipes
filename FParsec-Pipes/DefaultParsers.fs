@@ -46,6 +46,11 @@ type IPipeAppendBacktrackable<'u, 'r1, 'r2> =
     abstract member AppendBacktrackLeftTo : Pipe<'a, 'a, 'b, 'r1, 'u> -> Pipe<'r2, 'f, 'b, 'f, 'u>
     abstract member AppendBacktrackRightTo : Pipe<'a, 'a, 'b, 'r1, 'u> -> Pipe<'r2, 'f, 'b, 'f, 'u>
 
+type ITotalPipeFitting<'a, 'u, 'inp1, 'r1, 'inp2, 'r2> =
+    inherit IPipeFitting<'a, 'u>
+    inherit IPipeAppendable<'u, 'inp1, 'inp2>
+    inherit IPipeAppendBacktrackable<'u, 'r1, 'r2>
+
 type IgnoreFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
     interface IPipeFitting<'a, 'u> with
         member __.Parser = parser
@@ -54,6 +59,7 @@ type IgnoreFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
     interface IPipeAppendBacktrackable<'u, 'r, 'r> with
         member __.AppendBacktrackLeftTo(pipe) = appendIgnoreBacktrackLeft pipe parser
         member __.AppendBacktrackRightTo(pipe) = appendIgnoreBacktrackRight pipe parser
+    interface ITotalPipeFitting<'a, 'u, 'inp, 'r, 'inp, 'r>
 
 type CaptureFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
     interface IPipeFitting<'a, 'u> with
@@ -63,6 +69,7 @@ type CaptureFitting<'a, 'u, 'inp, 'r>(parser : Parser<'a, 'u>) =
     interface IPipeAppendBacktrackable<'u, 'a -> 'r, 'r> with
         member __.AppendBacktrackLeftTo(pipe) = appendCaptureBacktrackLeft pipe parser
         member __.AppendBacktrackRightTo(pipe) = appendCaptureBacktrackRight pipe parser
+    interface ITotalPipeFitting<'a, 'u, 'a -> 'inp, 'a -> 'r, 'inp, 'r>
 
 let (---) pipe (fitting : #IPipeAppendable<_, _, _>) =
     fitting.AppendTo(pipe)
@@ -73,7 +80,8 @@ let (?--) pipe (fitting : #IPipeAppendBacktrackable<_, _, _>) =
 let (--?) pipe (fitting : #IPipeAppendBacktrackable<_, _, _>) =
     fitting.AppendBacktrackRightTo(pipe)
 
-let ignoreParser (parser : Parser<_, _>) = IgnoreFitting(parser)
+let ignoreParser (parser : Parser<_, _>) =
+    IgnoreFitting(parser) :> ITotalPipeFitting<_, _, _, _, _, _>
 
 [<AllowNullLiteral>]
 type DefaultParserOf<'a>() =
@@ -84,7 +92,7 @@ and [<AllowNullLiteral>]
             (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)()) |> ignoreParser
 and DefaultParser =
     | DefaultParser
-    static member inline (%!!~~%) (DefaultParser, cap : #IPipeFitting<_, _>) = cap
+    static member inline (%!!~~%) (DefaultParser, cap : ITotalPipeFitting<_, _, _, _, _, _>) = cap
 
     static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing |> ignoreParser
     static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u> seq) = choice existing |> ignoreParser
@@ -130,13 +138,13 @@ let p<'a> = null : DefaultParserOf<'a>
 /// Create a parser from `x`, if there is a single sensible parser possible.
 /// For example, `defaultParser "str"` is equivalent to `pstring str`.
 let inline defaultParser x =
-    let fitting = (DefaultParser %!!~~% x) :> IPipeFitting<_, _>
+    let fitting : ITotalPipeFitting<_, _, _, _, _, _> = DefaultParser %!!~~% x
     fitting.Parser
 
 /// Converts its argument to a parser via `defaultParser` and
 /// marks the result as a captured input, which can be consumed
 /// by the function at the end of a pipe.
-let inline (~+.) x = CaptureFitting(defaultParser x)
+let inline (~+.) x = CaptureFitting(defaultParser x) :> ITotalPipeFitting<_, _, _, _, _, _>
 
 /// Chains `parser` onto `pipe`.
 /// `parser` will be converted to a parser and may be captured or ignored based
