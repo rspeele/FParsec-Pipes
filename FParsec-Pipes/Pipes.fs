@@ -111,7 +111,7 @@ let rec private linkIgnored p =
         member __.IgnoreUp up = linkIgnored (up >>. p)
     }
 
-let rec link0 () =
+let link0 () =
     { new IPipeLink<_, _, _> with
         member __.ToFunctionParser = preturn id
         member __.ToOutputParser f = preturn f

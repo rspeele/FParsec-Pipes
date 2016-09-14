@@ -209,17 +209,17 @@ let private fastOperatorParser (table : FastOperatorTable<'e, 'u>) =
                     %% +.exprParts.[ternary.MinInnerPrecedence]
                     -- ternary.RightOperator
                     -- +.exprParts.[ternary.MinRightPrecedence]
-                    -%> fun inner right left -> ternary.Make left inner right
+                    -|> fun inner right left -> ternary.Make left inner right
                 | TernaryOptionalTrailing ternary ->
                     %% +.exprParts.[ternary.MinInnerPrecedence]
                     -- +.((ternary.RightOperator >>. exprParts.[ternary.MinRightPrecedence]) * zeroOrOne)
-                    -%> fun inner right left -> ternary.MakeOptional left inner right
+                    -|> fun inner right left -> ternary.MakeOptional left inner right
             trailingParts.[i] <-
                 table.TrailingOperators.[i] >>= nextPart
             exprParts.[i] <-
                 %% +.prefixOrTerm
                 -- +.(trailingParts.[i] * qty.[0..])
-                -%> applySequentially
+                -|> applySequentially
         // for when left-assoc ops are highest precedence, we need one higher level that does no operator parsing
         exprParts.[exprParts.Length - 1] <- prefixOrTerm
         exprParts.[0]
