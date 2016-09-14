@@ -130,8 +130,8 @@ let p<'a> = null : DefaultParserOf<'a>
 /// Create a parser from `x`, if there is a single sensible parser possible.
 /// For example, `defaultParser "str"` is equivalent to `pstring str`.
 let inline defaultParser x =
-    let fitting = (DefaultParser %!!~~% x) :> IPipeFitting<_, _>
-    fitting.Parser
+    let fitting = (DefaultParser %!!~~% x) :> IgnoreFitting<'a, 'u, obj, obj>
+    (fitting :> IPipeFitting<'a, 'u>).Parser
 
 /// Converts its argument to a parser via `defaultParser` and
 /// marks the result as a captured input, which can be consumed
