@@ -19,14 +19,6 @@
 module FParsec.Pipes.DefaultParsers
 open FParsec
 
-type CaseInsensitive<'a> =
-    | CaseInsensitive of 'a
-
-/// Mark `x` as being case insensitive.
-/// Useful for use with `%`. For example `%ci "test"` is equivalent
-/// to `pstringCI "test"`, while `%"test"` is equivalent to `pstring "test"`.
-let ci x = CaseInsensitive x
-
 /// Parse a character case insensitively. Returns the parsed character.
 let pcharCI c : Parser<char, 'u> =
     let cfs = Text.FoldCase(c : char)
@@ -57,7 +49,17 @@ type DefaultFitting =
 
 [<AllowNullLiteral>]
 type DefaultParserOf<'a>() =
-    class end
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition 
 and [<AllowNullLiteral>]
     CustomDefaultParserOf< ^a when ^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >) >() =
         static member inline (%!!~~%) (DefaultParser, _ : CustomDefaultParserOf< ^a >) =
@@ -71,8 +73,6 @@ and DefaultParser =
 
     static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal
     static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal 
     static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate 
 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : char list) =
@@ -84,22 +84,18 @@ and DefaultParser =
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<string> list) =
         choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) 
 
-    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser 
-
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition 
-
+    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^a >) =
         DefaultParser %!!~~% (null : CustomDefaultParserOf< ^a >)
+and CaseInsensitive<'a> =
+    | CaseInsensitive of 'a
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal 
+
+/// Mark `x` as being case insensitive.
+/// Useful for use with `%`. For example `%ci "test"` is equivalent
+/// to `pstringCI "test"`, while `%"test"` is equivalent to `pstring "test"`.
+let ci x = CaseInsensitive x
 
 /// Represents the default parser for the given type.
 /// If the type `'a` has a default parser implemented, `p<'a>`
