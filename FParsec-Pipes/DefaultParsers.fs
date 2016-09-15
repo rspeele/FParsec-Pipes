@@ -48,7 +48,10 @@ type DefaultFitting =
         fitting
 
 [<AllowNullLiteral>]
-type DefaultParserOf<'a>() =
+type CustomDefaultParserOf< ^a when ^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >) >() =
+    static member inline (%!!~~%) (DefaultParser, _ : CustomDefaultParserOf< ^a >) =
+        (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)())
+and [<AllowNullLiteral>] DefaultParserOf<'a>() =
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 
@@ -59,11 +62,9 @@ type DefaultParserOf<'a>() =
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition 
-and [<AllowNullLiteral>]
-    CustomDefaultParserOf< ^a when ^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >) >() =
-        static member inline (%!!~~%) (DefaultParser, _ : CustomDefaultParserOf< ^a >) =
-            (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)())
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^x >) =
+        DefaultParser %!!~~% (null : CustomDefaultParserOf< ^x >)
 and DefaultParser =
     | DefaultParser
     static member inline (%!!~~%) (DefaultParser, cap : Fitting<_, _, _>) = cap
@@ -85,8 +86,6 @@ and DefaultParser =
         choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) 
 
     static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^a >) =
-        DefaultParser %!!~~% (null : CustomDefaultParserOf< ^a >)
 and CaseInsensitive<'a> =
     | CaseInsensitive of 'a
     static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
