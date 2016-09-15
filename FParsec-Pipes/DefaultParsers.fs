@@ -71,18 +71,12 @@ and DefaultParser =
 
     static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal
     static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal
-    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate 
-
-    static member inline (%!!~~%) (DefaultParser, anyOfThese : char list) =
-        anyOf anyOfThese 
-    static member inline (%!!~~%) (DefaultParser, anyOfThese : string list) =
-        choice (List.map pstring anyOfThese) 
-    static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<char> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) 
-    static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<string> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s))
-
-    static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser
+    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate
+    static member inline (%!!~~%) (DefaultParser, (count, parser) : int * Parser<'a, 'u>) = parray count parser
+    static member inline (%!!~~%) (DefaultParser, list : _ list) =
+        [ for thing in list ->
+            DefaultParser %!!~~% thing
+        ] |> choice
 and CaseInsensitive<'a> =
     | CaseInsensitive of 'a
     static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
