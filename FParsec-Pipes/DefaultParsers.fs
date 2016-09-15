@@ -48,10 +48,7 @@ type DefaultFitting =
         fitting
 
 [<AllowNullLiteral>]
-type CustomDefaultParserOf< ^a when ^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >) >() =
-    static member inline (%!!~~%) (DefaultParser, _ : CustomDefaultParserOf< ^a >) =
-        (^a : (static member get_DefaultParser : unit -> Parser< ^a, unit >)())
-and [<AllowNullLiteral>] DefaultParserOf<'a>() =
+type DefaultParserOf<'a>() =
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 
@@ -64,7 +61,7 @@ and [<AllowNullLiteral>] DefaultParserOf<'a>() =
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^x >) =
-        DefaultParser %!!~~% (null : CustomDefaultParserOf< ^x >)
+        (^x : (static member get_DefaultParser : unit -> Parser< ^x, unit >)())
 and DefaultParser =
     | DefaultParser
     static member inline (%!!~~%) (DefaultParser, cap : Fitting<_, _, _>) = cap
@@ -83,7 +80,7 @@ and DefaultParser =
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<char> list) =
         choice (anyOfThese |> List.map (function CaseInsensitive s -> pcharCI s)) 
     static member inline (%!!~~%) (DefaultParser, anyOfThese : CaseInsensitive<string> list) =
-        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s)) 
+        choice (anyOfThese |> List.map (function CaseInsensitive s -> pstringCI s))
 
     static member inline (%!!~~%) (DefaultParser, (count, parser)) = parray count parser
 and CaseInsensitive<'a> =
