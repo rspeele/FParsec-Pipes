@@ -47,7 +47,8 @@
 This is implicitly used by several other FParsec-Pipes operators.
 <strong>For the rest of this document, the phrase "parserish value" will refer to a value that
 either is a parser or can be converted to one using <code>%</code>.</strong>
-Here is the list of what <code>%</code> means based on the type given to it:</p>
+Here is the list of what <code>%</code> means based on the type given to it.
+Note that when given a list of values, <code>%</code> applies itself to each value in the list then passes the result to <code>choice</code>.</p>
 
 <table>
 <thead>
@@ -66,22 +67,22 @@ Here is the list of what <code>%</code> means based on the type given to it:</p>
 <td><p><code>id</code></p></td>
 </tr>
 <tr class="even">
-<td><p><code>Parser&lt;'a, 'u&gt; seq</code></p></td>
-<td><p><code>[pchar 'a';pchar 'b']</code></p></td>
-<td><p><code>Parser&lt;'a, 'u&gt;</code></p></td>
-<td><p><code>choice</code></p></td>
-</tr>
-<tr class="odd">
 <td><p><code>char</code></p></td>
 <td><p><code>'a'</code></p></td>
 <td><p><code>Parser&lt;char, 'u&gt;</code></p></td>
 <td><p><code>pchar</code></p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>string</code></p></td>
 <td><p><code>"str"</code></p></td>
 <td><p><code>Parser&lt;string, 'u&gt;</code></p></td>
 <td><p><code>pstring</code></p></td>
+</tr>
+<tr class="even">
+<td><p><code>'a list</code></p></td>
+<td><p><code>[ 'a'; 'b' ]</code></p></td>
+<td><p><code>Parser&lt;'b, 'u&gt;</code></p></td>
+<td><p><code>choice &lt;&lt; List.map (%)</code></p></td>
 </tr>
 <tr class="odd">
 <td><p><code>CaseInsensitive&lt;char&gt;</code></p></td>
@@ -96,102 +97,72 @@ Here is the list of what <code>%</code> means based on the type given to it:</p>
 <td><p><code>pstringCI</code></p></td>
 </tr>
 <tr class="odd">
-<td><p><code>char list</code></p></td>
-<td><p><code>['a';'b']</code></p></td>
-<td><p><code>Parser&lt;char, 'u&gt;</code></p></td>
-<td><p><code>anyOf</code></p></td>
-</tr>
-<tr class="even">
-<td><p><code>CaseInsensitive&lt;char&gt; list</code></p></td>
-<td><p><code>ci ['a';'b']</code></p></td>
-<td><p><code>Parser&lt;char, 'u&gt;</code></p></td>
-<td><p><code>choice &lt;&lt; map pcharCI</code></p></td>
-</tr>
-<tr class="odd">
-<td><p><code>CaseInsensitive&lt;string&gt; list</code></p></td>
-<td><p><code>[ci "foo"; ci "bar"]</code></p></td>
-<td><p><code>Parser&lt;string, 'u&gt;</code></p></td>
-<td><p><code>choice &lt;&lt; map pstringCI</code></p></td>
-</tr>
-<tr class="even">
-<td><p><code>char -&gt; bool</code></p></td>
-<td><p><code>fun c -&gt; c == 'a'</code></p></td>
-<td><p><code>Parser&lt;char, 'u&gt;</code></p></td>
-<td><p><code>satisfy</code></p></td>
-</tr>
-<tr class="odd">
-<td><p><code>int * Parser&lt;'a, 'u&gt;</code></p></td>
-<td><p><code>(3, digit)</code></p></td>
-<td><p><code>Parser&lt;'a array, 'u&gt;</code></p></td>
-<td><p><code>parray n</code></p></td>
-</tr>
-<tr class="even">
 <td><p><code>DefaultParserOf&lt;char&gt;</code></p></td>
 <td><p><code>p&lt;char&gt;</code></p></td>
 <td><p><code>Parser&lt;char, 'u&gt;</code></p></td>
 <td><p><code>anyChar</code></p></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><p><code>DefaultParserOf&lt;float&gt;</code></p></td>
 <td><p><code>p&lt;float&gt;</code></p></td>
 <td><p><code>Parser&lt;float, 'u&gt;</code></p></td>
 <td><p><code>pfloat</code></p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>DefaultParserOf&lt;int8&gt;</code></p></td>
 <td><p><code>p&lt;int8&gt;</code></p></td>
 <td><p><code>Parser&lt;int8, 'u&gt;</code></p></td>
 <td><p><code>pint8</code></p></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><p><code>DefaultParserOf&lt;int16&gt;</code></p></td>
 <td><p><code>p&lt;int16&gt;</code></p></td>
 <td><p><code>Parser&lt;int16, 'u&gt;</code></p></td>
 <td><p><code>pint16</code></p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>DefaultParserOf&lt;int32&gt;</code></p></td>
 <td><p><code>p&lt;int32&gt;</code></p></td>
 <td><p><code>Parser&lt;int32, 'u&gt;</code></p></td>
 <td><p><code>pint32</code></p></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><p><code>DefaultParserOf&lt;int64&gt;</code></p></td>
 <td><p><code>p&lt;int64&gt;</code></p></td>
 <td><p><code>Parser&lt;int64, 'u&gt;</code></p></td>
 <td><p><code>pint64</code></p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>DefaultParserOf&lt;uint8&gt;</code></p></td>
 <td><p><code>p&lt;uint8&gt;</code></p></td>
 <td><p><code>Parser&lt;uint8, 'u&gt;</code></p></td>
 <td><p><code>puint8</code></p></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><p><code>DefaultParserOf&lt;uint16&gt;</code></p></td>
 <td><p><code>p&lt;uint16&gt;</code></p></td>
 <td><p><code>Parser&lt;uint16, 'u&gt;</code></p></td>
 <td><p><code>puint16</code></p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>DefaultParserOf&lt;uint32&gt;</code></p></td>
 <td><p><code>p&lt;uint32&gt;</code></p></td>
 <td><p><code>Parser&lt;uint32, 'u&gt;</code></p></td>
 <td><p><code>puint32</code></p></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><p><code>DefaultParserOf&lt;uint64&gt;</code></p></td>
 <td><p><code>p&lt;uint64&gt;</code></p></td>
 <td><p><code>Parser&lt;uint64, 'u&gt;</code></p></td>
 <td><p><code>puint64</code></p></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><p><code>DefaultParserOf&lt;Position&gt;</code></p></td>
 <td><p><code>p&lt;Position&gt;</code></p></td>
 <td><p><code>Parser&lt;Position, 'u&gt;</code></p></td>
 <td><p><code>getPosition</code></p></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><p><code>DefaultParserOf&lt;'a&gt;</code></p></td>
 <td><p><code>p&lt;'a&gt;</code></p></td>
 <td><p><code>Parser&lt;'a, 'u&gt;</code></p></td>
@@ -262,7 +233,8 @@ into a tuple of the appropriate arity.</p>
 
 <h3>qty.[n]</h3>
 
-<p><code>qty.[n]</code> indicates that the associated parser should be consumed exactly <code>n</code> times.</p>
+<p><code>qty.[n]</code> indicates that the associated parser should be consumed exactly <code>n</code> times.
+The resulting parser will return an array, not a <code>ResizeArray</code>.</p>
 
 <h3>Range * parserish</h3>
 
