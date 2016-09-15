@@ -71,9 +71,9 @@ and DefaultParser =
     static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal
 
     static member inline (%!!~~%) (DefaultParser, list : _ list) =
-        [ for parserish in list ->
+        [| for parserish in list ->
             DefaultParser %!!~~% parserish
-        ] |> choice
+        |] |> choice
 and CaseInsensitive<'a> =
     | CaseInsensitive of 'a
     static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
