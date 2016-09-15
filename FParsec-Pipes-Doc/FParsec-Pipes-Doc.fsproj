@@ -59,7 +59,6 @@
     <None Include="template.html" />
     <None Include="Intro.fsx" />
     <None Include="Reference.fsx" />
-    <None Include="GraphQL.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSharpFormat">
