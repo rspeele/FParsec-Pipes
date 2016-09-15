@@ -90,14 +90,6 @@ type TestDefaultParsers() =
         good parser "ab" 1 'a'
 
     [<TestMethod>]
-    member __.TestCharPredicate() =
-        let parser = %(fun c -> c = 'x' || c = 'y')
-        bad parser "" 0
-        bad parser "z" 0
-        good parser "x" 1 'x'
-        good parser "y" 1 'y'
-
-    [<TestMethod>]
     member __.TestStringCI() =
         let parser = %ci "test"
         bad parser "blah" 0

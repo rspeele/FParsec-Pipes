@@ -140,6 +140,21 @@ type ZeroOrOne =
     static member inline ( * ) (ZeroOrOne, x) = opt %x
     static member inline ( * ) (x, ZeroOrOne) = opt %x
 
+type ExactRange(count) =
+    member this.Count = count
+    static member inline ( * ) (range : ExactRange, x) = parray range.Count %x
+    static member inline ( * ) (x, range : ExactRange) = parray range.Count %x
+    static member inline ( / ) (range : ExactRange, x) = ExactRangeSeparatedBy(range.Count, %x, false)
+    static member inline ( /. ) (range : ExactRange, x) = ExactRangeSeparatedBy(range.Count, %x, true)
+
+and ExactRangeSeparatedBy<'a, 'u>(count : int, separator : Parser<'a, 'u>, allowEnd : bool) =
+    member this.Of(parser: Parser<'b, 'u>) =
+        parseManyRangeSepBy allowEnd count count separator parser
+        |>> (fun ra -> ra.ToArray())
+
+    static member inline ( * ) (rangeSep : ExactRangeSeparatedBy<_, _>, x) = rangeSep.Of(%x)
+    static member inline ( * ) (x, rangeSep : ExactRangeSeparatedBy<_, _>) = rangeSep.Of(%x)
+
 type Range(min : int, max : int option) =
     member this.Min = min
     member this.Max = max
@@ -169,7 +184,7 @@ type RangeDefiner() =
     member this.GetSlice(min : int option, max : int option) =
         new Range(defaultArg min 0, max)
     member this.Item(exactCount : int) =
-        new Range(exactCount, Some exactCount)
+        new ExactRange(exactCount)
 
 let qty = RangeDefiner()
 

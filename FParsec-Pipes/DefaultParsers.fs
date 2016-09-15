@@ -65,17 +65,14 @@ type DefaultParserOf<'a>() =
 and DefaultParser =
     | DefaultParser
     static member inline (%!!~~%) (DefaultParser, cap : Fitting<_, _, _>) = cap
-
     static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u> seq) = choice existing
 
     static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal
     static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal
-    static member inline (%!!~~%) (DefaultParser, predicate : char -> bool) = satisfy predicate
-    static member inline (%!!~~%) (DefaultParser, (count, parser) : int * Parser<'a, 'u>) = parray count parser
+
     static member inline (%!!~~%) (DefaultParser, list : _ list) =
-        [ for thing in list ->
-            DefaultParser %!!~~% thing
+        [ for parserish in list ->
+            DefaultParser %!!~~% parserish
         ] |> choice
 and CaseInsensitive<'a> =
     | CaseInsensitive of 'a

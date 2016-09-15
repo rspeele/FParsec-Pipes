@@ -328,7 +328,7 @@ Otherwise we would get confused whenever we see a column name starting with "x".
 
 let blobLiteral =
     let octet =
-        %% +.(2, hex)
+        %% +.(qty.[2] * hex)
         -|> fun pair -> Byte.Parse(String(pair), NumberStyles.HexNumber)
     (%% ['x';'X']
     -? '\''
