@@ -103,3 +103,16 @@ type TestDefaultParsers() =
         bad parser "b" 0
         good parser "a" 1 'a'
         good parser "A" 1 'A'
+
+    [<TestMethod>]
+    member __.TestNestedList() =
+        let parser =
+            %[
+                [ 'a'; 'b' ]
+                [ 'c'; 'd' ]
+            ]
+        bad parser "e" 0
+        good parser "a" 1 'a'
+        good parser "b" 1 'b'
+        good parser "c" 1 'c'
+        good parser "d" 1 'd'
