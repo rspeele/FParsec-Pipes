@@ -33,7 +33,7 @@ let inline (---) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) (fitting : Fitting<'a, '
         (fitting.Appendable, pipe))
 
 let inline (?--) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member AppendBacktrackLeft : Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<'r, 'x, 'fn, 'x, 'u>)
+    (^app : (member AppendBacktrackLeft : Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
         (fitting.Appendable, pipe))
 
 let inline (--?) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
