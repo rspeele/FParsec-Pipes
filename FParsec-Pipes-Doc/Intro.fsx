@@ -26,7 +26,7 @@ Here's a parser for ISO-8601-formatted datetimes.
 
 // Parses `count` digits and returns the result as an integer.
 let digits (count : int) =
-    %% +.(count, digit)
+    %% +.(qty.[count] * digit)
     -%> (String >> Int32.Parse)
 
 // Parses a yyyy-mm-dd date and returns the result as a tuple of 3 integers.
@@ -188,7 +188,7 @@ type Timestamp =
 
 let unixTimestamp = %% +.p<int64> -%> UnixTimestamp
 let calendarTimestamp =
-    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
     %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
     -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
     -%> fun yyyy mm dd h m s ->
@@ -216,7 +216,7 @@ The `?-` operator wraps everything to its left in `attempt`.
 *)
 
 let calendarTimestampBacktrack1 : Parser<_, unit> =
-    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
     %% +.digits 4 -- '-' ?- +.digits 2 -- '-' -- +.digits 2 -- 'T'
                       // ^^ Backtrack the whole pipe if anything to the left of this fails.
     -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
@@ -234,7 +234,7 @@ This is a bit harder to understand, but can sometimes produce better error messa
 *)
 
 let calendarTimestampBacktrack2 : Parser<_, unit> =
-    let digits (count : int) = %% +.(count, digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
     %% +.digits 4 -? '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
                   // ^^ Backtrack the whole pipe if anything to the left of this fails,
                   // or if the parser to the right fails without changing the parser state.
