@@ -20,21 +20,17 @@ The default parser for a given value is `%value`.
 This is implicitly used by several other FParsec-Pipes operators.
 **For the rest of this document, the phrase "parserish value" will refer to a value that
 either is a parser or can be converted to one using `%`.**
-Here is the list of what `%` means based on the type given to it:
+Here is the list of what `%` means based on the type given to it.
+Note that when given a list of values, `%` applies itself to each value in the list then passes the result to `choice`.
 
 | Type                           | Expression              | Parser Type             | Equivalent Function |
 +--------------------------------+-------------------------+-------------------------+---------------------+
 | `Parser<'a, 'u>`               | `preturn 1`             | `Parser<'a, 'u>`        | `id` |
-| `Parser<'a, 'u> seq`           | `[pchar 'a';pchar 'b']` | `Parser<'a, 'u>`        | `choice` |
 | `char`                         | `'a'`                   | `Parser<char, 'u>`      | `pchar` |
 | `string`                       | `"str"`                 | `Parser<string, 'u>`    | `pstring` |
+| `'a list`                      | `[ 'a'; 'b' ]`          | `Parser<'b, 'u>`        | `choice << List.map (%)` |
 | `CaseInsensitive<char>`        | `ci 'a'`                | `Parser<char, 'u>`      | `pcharCI` |
 | `CaseInsensitive<string>`      | `ci "str"`              | `Parser<string, 'u>`    | `pstringCI` |
-| `char list`                    | `['a';'b']`             | `Parser<char, 'u>`      | `anyOf` |
-| `CaseInsensitive<char> list`   | `ci ['a';'b']`          | `Parser<char, 'u>`      | `choice << map pcharCI` |
-| `CaseInsensitive<string> list` | `[ci "foo"; ci "bar"]`  | `Parser<string, 'u>`    | `choice << map pstringCI` |
-| `char -> bool`                 | `fun c -> c == 'a'`     | `Parser<char, 'u>`      | `satisfy` |
-| `int * Parser<'a, 'u>`         | `(3, digit)`            | `Parser<'a array, 'u>`  | `parray n` |
 | `DefaultParserOf<char>`        | `p<char>`               | `Parser<char, 'u>`      | `anyChar` |
 | `DefaultParserOf<float>`       | `p<float>`              | `Parser<float, 'u>`     | `pfloat` |
 | `DefaultParserOf<int8>`        | `p<int8>`               | `Parser<int8, 'u>`      | `pint8` |
@@ -110,6 +106,7 @@ into a tuple of the appropriate arity.
 ### qty.[n]
 
 `qty.[n]` indicates that the associated parser should be consumed exactly `n` times.
+The resulting parser will return an array, not a `ResizeArray`.
 
 ### Range * parserish
 

@@ -1,4 +1,4 @@
-﻿namespace FParsec_Pipes.AssemblyInfo
+﻿namespace Examples.SQLite.AssemblyInfo
 
 open System.Reflection
 open System.Runtime.CompilerServices
@@ -7,12 +7,12 @@ open System.Runtime.InteropServices
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[<assembly: AssemblyTitle("FParsec-Pipes")>]
-[<assembly: AssemblyDescription("A library for building FParsec parsers using pipeline operators.")>]
+[<assembly: AssemblyTitle("Examples.SQLite")>]
+[<assembly: AssemblyDescription("")>]
 [<assembly: AssemblyConfiguration("")>]
-[<assembly: AssemblyCompany("Robert Peele")>]
-[<assembly: AssemblyProduct("FParsec-Pipes")>]
-[<assembly: AssemblyCopyright("Copyright © Robert Peele 2016")>]
+[<assembly: AssemblyCompany("")>]
+[<assembly: AssemblyProduct("Examples.SQLite")>]
+[<assembly: AssemblyCopyright("Copyright ©  2016")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]
 
@@ -22,7 +22,7 @@ open System.Runtime.InteropServices
 [<assembly: ComVisible(false)>]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[<assembly: Guid("43972044-e21c-4442-a97a-f3bef84afd2e")>]
+[<assembly: Guid("36dfb272-18b5-4f66-8c3b-5a1fe664c0dd")>]
 
 // Version information for an assembly consists of the following four values:
 // 
@@ -34,8 +34,8 @@ open System.Runtime.InteropServices
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [<assembly: AssemblyVersion("1.0.*")>]
-[<assembly: AssemblyVersion("0.2.0.0")>]
-[<assembly: AssemblyFileVersion("0.2.0.0")>]
+[<assembly: AssemblyVersion("1.0.0.0")>]
+[<assembly: AssemblyFileVersion("1.0.0.0")>]
 
 do
     ()

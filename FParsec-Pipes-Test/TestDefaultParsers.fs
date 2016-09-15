@@ -90,14 +90,6 @@ type TestDefaultParsers() =
         good parser "ab" 1 'a'
 
     [<TestMethod>]
-    member __.TestCharPredicate() =
-        let parser = %(fun c -> c = 'x' || c = 'y')
-        bad parser "" 0
-        bad parser "z" 0
-        good parser "x" 1 'x'
-        good parser "y" 1 'y'
-
-    [<TestMethod>]
     member __.TestStringCI() =
         let parser = %ci "test"
         bad parser "blah" 0
@@ -111,3 +103,16 @@ type TestDefaultParsers() =
         bad parser "b" 0
         good parser "a" 1 'a'
         good parser "A" 1 'A'
+
+    [<TestMethod>]
+    member __.TestNestedList() =
+        let parser =
+            %[
+                [ 'a'; 'b' ]
+                [ 'c'; 'd' ]
+            ]
+        bad parser "e" 0
+        good parser "a" 1 'a'
+        good parser "b" 1 'b'
+        good parser "c" 1 'c'
+        good parser "d" 1 'd'

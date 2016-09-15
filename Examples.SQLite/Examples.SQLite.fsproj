@@ -5,14 +5,14 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>8f591cc1-94c7-4ca0-8645-5a8e3cdca4fc</ProjectGuid>
+    <ProjectGuid>36dfb272-18b5-4f66-8c3b-5a1fe664c0dd</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>FParsec_Pipes_Test</RootNamespace>
-    <AssemblyName>FParsec-Pipes-Test</AssemblyName>
+    <RootNamespace>Examples.SQLite</RootNamespace>
+    <AssemblyName>Examples.SQLite</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Name>FParsec-Pipes-Test</Name>
+    <Name>Examples.SQLite</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,7 +22,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\FParsec_Pipes_Test.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Examples.SQLite.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,7 +31,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\FParsec_Pipes_Test.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\Examples.SQLite.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -50,14 +50,10 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="Tools.fs" />
-    <Compile Include="TestIgnoredInputs.fs" />
-    <Compile Include="TestCapturedInputs.fs" />
-    <Compile Include="TestDefaultParsers.fs" />
-    <Compile Include="TestDefaultEnding.fs" />
-    <Compile Include="TestCustomDefaultParsers.fs" />
-    <Compile Include="TestMany.fs" />
-    <Compile Include="TestPrecedence.fs" />
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="AST.fs" />
+    <Compile Include="SQLite.fs" />
+    <Compile Include="Tests.fs" />
     <Content Include="packages.config" />
     <Content Include="app.config" />
   </ItemGroup>
@@ -84,6 +80,12 @@
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>
+  <PropertyGroup>
+    <PreBuildEvent>echo %TIME%</PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>echo %TIME%</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

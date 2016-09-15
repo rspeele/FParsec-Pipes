@@ -36,3 +36,18 @@ type TestCustomDefaultParsers() =
         good parser "b: 1.5" 4 (CustomB '1')
         good parser "b: 0" 4 (CustomB '0')
         good parser "b: nc" 4 (CustomB 'n')
+
+    [<TestMethod>]
+    member __.TestCustomBList() =
+        let parser =
+            %[
+                p<CustomB>
+                p<CustomB>
+            ]
+        bad parser "" 0
+        bad parser "a" 0
+        bad parser "b" 0
+        bad parser "b: " 3
+        good parser "b: 1.5" 4 (CustomB '1')
+        good parser "b: 0" 4 (CustomB '0')
+        good parser "b: nc" 4 (CustomB 'n')
