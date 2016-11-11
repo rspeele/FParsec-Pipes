@@ -29,16 +29,16 @@ let pcharCI c : Parser<char, 'u> =
         else Reply(Error, expectedString (string c))
 
 let inline (---) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member Append : Pipe<'inp, 'out, 'fn, 'r, 'u> -> Pipe<_, 'out, 'fn, 'r, 'u>)
-        (fitting.Appendable, pipe))
+    (^app : (member Append : Parser<'a, 'u> * Pipe<'inp, 'out, 'fn, 'r, 'u> -> Pipe<_, 'out, 'fn, 'r, 'u>)
+        (fitting.Appendable, fitting.Parser, pipe))
 
 let inline (?--) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member AppendBacktrackLeft : Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
-        (fitting.Appendable, pipe))
+    (^app : (member AppendBacktrackLeft : Parser<'a, 'u> * Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
+        (fitting.Appendable, fitting.Parser, pipe))
 
 let inline (--?) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member AppendBacktrackRight : Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
-        (fitting.Appendable, pipe))
+    (^app : (member AppendBacktrackRight : Parser<'a, 'u> * Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
+        (fitting.Appendable, fitting.Parser, pipe))
 
 type DefaultFitting =
     | DefaultFitting
