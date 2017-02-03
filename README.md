@@ -12,10 +12,10 @@ Instead, its goal is to make it easier and more readable to define your own pars
 
 ```fsharp
 let pdatetime =
-    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -|> (String >> Int32.Parse)
     %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
     -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
-    -%> fun yyyy mm dd h m s ->
+    -|> fun yyyy mm dd h m s ->
         new DateTime(yyyy, mm, dd, h, m, s)
 ```
 
