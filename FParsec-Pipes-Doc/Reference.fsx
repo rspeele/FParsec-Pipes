@@ -72,15 +72,15 @@ if `myPipe` fails or if `parserish` and following values in the pipeline fail wi
 ### +.
 
 `+. parserish` marks a parserish value as captured.
-If added to a pipeline, this captured value will need to be consumed by the function passed to `-%>`.
+If added to a pipeline, this captured value will need to be consumed by the function passed to `-|>`.
 
-### -%>
+### -|>
 
-`myPipe -%> myFunction` terminates a pipeline with a function consuming the captured outputs of the pipeline.
+`myPipe -|> myFunction` terminates a pipeline with a function consuming the captured outputs of the pipeline.
 If the pipeline has no outputs (no captured values), then `myFunction` can be of any type, and will be returned
 on a successful parse (as if used with `preturn`).
 
-### auto
+### -%> auto
 
 `myPipe -%> auto` terminates a pipeline which has 1 to 5 captured outputs with a function combining them
 into a tuple of the appropriate arity.

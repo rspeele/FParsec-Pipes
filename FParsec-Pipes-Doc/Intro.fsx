@@ -27,7 +27,7 @@ Here's a parser for ISO-8601-formatted datetimes.
 // Parses `count` digits and returns the result as an integer.
 let digits (count : int) =
     %% +.(qty.[count] * digit)
-    -%> (String >> Int32.Parse)
+    -|> (String >> Int32.Parse)
 
 // Parses a yyyy-mm-dd date and returns the result as a tuple of 3 integers.
 let date =
@@ -42,7 +42,7 @@ let time =
 // Parses a DateTime in the format yyyy-mm-ddThh:mm:ss
 let datetime : Parser<_, unit> =
     %% +.date -- 'T' -- +.time
-    -%> fun (yyyy, mm, dd) (hh, mi, ss) ->
+    -|> fun (yyyy, mm, dd) (hh, mi, ss) ->
         new DateTime(yyyy, mm, dd, hh, mi, ss)
 
 (**
@@ -124,7 +124,7 @@ The rules for combining parsers with these operators are simple:
 * Start the pipe with `%%` followed by the first parser.
 * Add additional parsers to the pipe with the `--` operator.
 * "Capture" parser outputs in the pipe with the `+.` prefix operator.
-* Complete the pipe with `-%>` by supplying a function to combine all the "captured" outputs.
+* Complete the pipe with `-|>` by supplying a function to combine all the "captured" outputs.
 
 All the operators use `%` to convert their operands to parsers, so you can use raw characters and strings
 in the pipeline. Here's the rewritten version of the `Vector3D` parser.
@@ -135,29 +135,29 @@ let vector3pipe : Parser<_, unit> =
     -- +.p<float> -- spaces -- ',' -- spaces
     -- +.p<float> -- spaces -- ',' -- spaces
     -- +.p<float> -- spaces -- ')'
-    -%> fun x y z -> { X = x; Y = y; Z = z }
+    -|> fun x y z -> { X = x; Y = y; Z = z }
 
 (**
 
 Sometimes it's overkill to write a function to combine the captured outputs of a pipe.
 Maybe the pipe has no outputs, or only one, or you just need a tuple.
 
-For pipes with no outputs, you can give any value to `-%>` and that value will be returned from the parser on success.
+For pipes with no outputs, you can give any value to `-|>` and that value will be returned from the parser on success.
 This is like the `>>%` operator in FParsec.
 
 *)
 
 let unitexample : Parser<unit, unit> =
-    %% "this pipe" -- "has no" -- "captures" -%> ()
+    %% "this pipe" -- "has no" -- "captures" -|> ()
 
 // Always produces the value 1337 on success
 let constexample : Parser<int, unit> =
-    %% "some text" -%> 1337
+    %% "some text" -|> 1337
 
 (**
 
 For pipes with 1 to 5 outputs, you can automatically combine them into a tuple by using
-`auto` as the terminating value.
+`-%> auto` as the terminator.
 
 *)
 
@@ -186,12 +186,12 @@ type Timestamp =
     | UnixTimestamp of int64
     | CalendarTimestamp of DateTime
 
-let unixTimestamp = %% +.p<int64> -%> UnixTimestamp
+let unixTimestamp = %% +.p<int64> -|> UnixTimestamp
 let calendarTimestamp =
-    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -|> (String >> Int32.Parse)
     %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
     -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
-    -%> fun yyyy mm dd h m s ->
+    -|> fun yyyy mm dd h m s ->
         new DateTime(yyyy, mm, dd, h, m, s) |> CalendarTimestamp
 
 let timestamp : Parser<_, unit> =
@@ -216,11 +216,11 @@ The `?-` operator wraps everything to its left in `attempt`.
 *)
 
 let calendarTimestampBacktrack1 : Parser<_, unit> =
-    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -|> (String >> Int32.Parse)
     %% +.digits 4 -- '-' ?- +.digits 2 -- '-' -- +.digits 2 -- 'T'
                       // ^^ Backtrack the whole pipe if anything to the left of this fails.
     -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
-    -%> fun yyyy mm dd h m s ->
+    -|> fun yyyy mm dd h m s ->
         new DateTime(yyyy, mm, dd, h, m, s) |> CalendarTimestamp
 
 (**
@@ -234,12 +234,12 @@ This is a bit harder to understand, but can sometimes produce better error messa
 *)
 
 let calendarTimestampBacktrack2 : Parser<_, unit> =
-    let digits (count : int) = %% +.(qty.[count] * digit) -%> (String >> Int32.Parse)
+    let digits (count : int) = %% +.(qty.[count] * digit) -|> (String >> Int32.Parse)
     %% +.digits 4 -? '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
                   // ^^ Backtrack the whole pipe if anything to the left of this fails,
                   // or if the parser to the right fails without changing the parser state.
     -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
-    -%> fun yyyy mm dd h m s ->
+    -|> fun yyyy mm dd h m s ->
         new DateTime(yyyy, mm, dd, h, m, s) |> CalendarTimestamp
 
 (**
@@ -291,6 +291,6 @@ qty.[0..] / ',' * 'a'   // same as above, just written in a different order
 qty.[1..] /. ',' * 'a'  // parse one or more 'a's separated by ','s, with an optional trailing ','
                         // similar to sepEndBy1 %'a' %','
 
-let comma() = %% "," -- spaces -%> ()
-let element() = %% 'a' -- spaces -%> ()
+let comma() = %% "," -- spaces -|> ()
+let element() = %% 'a' -- spaces -|> ()
 in qty.[2..10] / comma() * element() // parse 2 to 10 'a's separated by commas, with whitespace allowed
