@@ -24,7 +24,7 @@ open System
 /// if given a value of type `'inp`. Practically speaking, `'inp` is typically
 /// a function combining the outputs of the captured parsers constituting this pipe section.
 [<AbstractClass>]
-type IPipeLink<'inp, 'out, 'u>() =
+type PipeLink<'inp, 'out, 'u>() =
     /// Convert to a `Parser<'inp -> 'out, 'u>`. This defers the
     /// requirement of an `'inp` value to after parsing, rather than
     /// before creating the parser.
@@ -35,14 +35,14 @@ type IPipeLink<'inp, 'out, 'u>() =
     /// a function going from the preceding parser's output to our `'inp`.
     /// This lets us build an `IPipeLink` requiring an `a -> b -> c -> d`
     /// from a chain of `parseA`, `parseB`, `parseC`, working right-to-left.
-    abstract member LinkUp : Parser<'up, 'u> -> IPipeLink<'up -> 'inp, 'out, 'u>
+    abstract member LinkUp : Parser<'up, 'u> -> PipeLink<'up -> 'inp, 'out, 'u>
     /// Produce an `IPipeLink` that will run the given parser prior to this one's
     /// and ignore its output.
-    abstract member IgnoreUp : Parser<'up, 'u> -> IPipeLink<'inp, 'out, 'u>
+    abstract member IgnoreUp : Parser<'up, 'u> -> PipeLink<'inp, 'out, 'u>
 
-let private supplyInput (link : IPipeLink<_, _, _>) inp = link.ToOutputParser inp
-let private linkUp parser (link : IPipeLink<_, _, _>) = link.LinkUp parser
-let private ignoreUp parser (link : IPipeLink<_, _, _>) = link.IgnoreUp parser
+let private supplyInput (link : PipeLink<_, _, _>) inp = link.ToOutputParser inp
+let private linkUp parser (link : PipeLink<_, _, _>) = link.LinkUp parser
+let private ignoreUp parser (link : PipeLink<_, _, _>) = link.IgnoreUp parser
 
 // This combines parsers with more than 5 arguments.
 // The trick is to start a new link chain from 1 on the left side, and on the right side keep a parser
@@ -52,10 +52,10 @@ let private ignoreUp parser (link : IPipeLink<_, _, _>) = link.IgnoreUp parser
 //         (pipe3 pa pb pc (fun a b c d e f g h -> final_result))
 //         (pipe5 pd pe pf pg ph (fun d e f g h parent -> parent d e f g h)) (|>)
 let rec private linkBeyond5<'a, 'b, 'f, 'u>
-    (functionLink : IPipeLink<'a, 'b, 'u>)
+    (functionLink : PipeLink<'a, 'b, 'u>)
     (parseRemaining : Parser<'b -> 'f, 'u>)
-    : IPipeLink<'a, 'f, 'u> =
-    { new IPipeLink<'a, 'f, 'u>() with
+    : PipeLink<'a, 'f, 'u> =
+    { new PipeLink<'a, 'f, 'u>() with
         member __.ToFunctionParser = pipe2 (functionLink.ToFunctionParser) parseRemaining (>>)
         member __.ToOutputParser f = pipe2 (functionLink.ToOutputParser f) parseRemaining (|>)
         member __.LinkUp up = linkBeyond5 (functionLink.LinkUp up) parseRemaining
@@ -64,7 +64,7 @@ let rec private linkBeyond5<'a, 'b, 'f, 'u>
 
 let rec private link5 a b c d e =
     let p5 = pipe5 a b c d e (fun a b c d e f -> f a b c d e)
-    { new IPipeLink<_, _, _>() with
+    { new PipeLink<_, _, _>() with
         member __.ToFunctionParser = p5
         member __.ToOutputParser f = pipe5 a b c d e f
         member __.LinkUp up =
@@ -73,7 +73,7 @@ let rec private link5 a b c d e =
     }
 
 and private link4 a b c d =
-    { new IPipeLink<_, _, _>() with
+    { new PipeLink<_, _, _>() with
         member __.ToFunctionParser = pipe4 a b c d (fun a b c d f -> f a b c d)
         member __.ToOutputParser f = pipe4 a b c d f
         member __.LinkUp up = link5 up a b c d
@@ -81,7 +81,7 @@ and private link4 a b c d =
     }
 
 and private link3 a b c =
-    { new IPipeLink<_, _, _>() with
+    { new PipeLink<_, _, _>() with
         member __.ToFunctionParser = pipe3 a b c (fun a b c f -> f a b c)
         member __.ToOutputParser f = pipe3 a b c f
         member __.LinkUp up = link4 up a b c
@@ -89,7 +89,7 @@ and private link3 a b c =
     }
 
 and private link2 a b =
-    { new IPipeLink<_, _, _>() with
+    { new PipeLink<_, _, _>() with
         member __.ToFunctionParser = pipe2 a b (fun a b f -> f a b)
         member __.ToOutputParser f = pipe2 a b f
         member __.LinkUp up = link3 up a b
@@ -97,8 +97,8 @@ and private link2 a b =
     }
 
 // Extra type annotation on link1 is necessary due to its usage in link5.
-and private link1<'a, 'b, 'u> (a : Parser<'a, 'u>) : IPipeLink<'a -> 'b, 'b, 'u> =
-    { new IPipeLink<'a -> 'b, 'b, 'u>() with
+and private link1<'a, 'b, 'u> (a : Parser<'a, 'u>) : PipeLink<'a -> 'b, 'b, 'u> =
+    { new PipeLink<'a -> 'b, 'b, 'u>() with
         member __.ToFunctionParser = a |>> (|>)
         member __.ToOutputParser f = a |>> f
         member __.LinkUp up = link2 up a
@@ -106,7 +106,7 @@ and private link1<'a, 'b, 'u> (a : Parser<'a, 'u>) : IPipeLink<'a -> 'b, 'b, 'u>
     }
 
 let rec private linkIgnored p =
-    { new IPipeLink<'a, 'a, 'u>() with
+    { new PipeLink<'a, 'a, 'u>() with
         member __.ToFunctionParser = p >>% id
         member __.ToOutputParser f = p >>% f
         member __.LinkUp up = link1 (up .>> p)
@@ -114,7 +114,7 @@ let rec private linkIgnored p =
     }
 
 let link0 () =
-    { new IPipeLink<_, _, _>() with
+    { new PipeLink<_, _, _>() with
         member __.ToFunctionParser = preturn id
         member __.ToOutputParser f = preturn f
         member __.LinkUp up = link1 up
@@ -124,7 +124,7 @@ let link0 () =
 /// Given the input to the `IPipeLink` we have right now, get a new `IPipeLink` expecting a function
 /// that does something with the output of our link. This lets us map functions onto the eventual
 /// materialized parser with `|>>`.
-let private collapse (link : IPipeLink<'a, 'b, 'u>) (inp : 'a) =
+let private collapse (link : PipeLink<'a, 'b, 'u>) (inp : 'a) =
     link.ToOutputParser inp |> link1
 
 /// Represents a chain of parsers that can be converted to a single parser,
@@ -132,7 +132,7 @@ let private collapse (link : IPipeLink<'a, 'b, 'u>) (inp : 'a) =
 /// that takes the captured inputs accumulated by the parser chain
 /// and combines them into a single output.
 type Pipe<'inp, 'out, 'fn, 'r, 'u> =
-    | Pipe of (IPipeLink<'inp, 'out, 'u> -> 'fn -> Parser<'r, 'u>)
+    | Pipe of (PipeLink<'inp, 'out, 'u> -> 'fn -> Parser<'r, 'u>)
     /// Provide the pipe with the function it requires to become a parser.
     static member (-%>) (Pipe parent, fn : 'fn) : Parser<'r, 'u> =
         parent (link0()) fn
