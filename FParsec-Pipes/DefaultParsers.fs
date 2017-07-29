@@ -28,6 +28,8 @@ let pcharCI c : Parser<char, 'u> =
         else Reply(Error, expectedString (string c))
 
 /// Represents a parser whose output is captured within a pipeline.
+[<NoComparison>]
+[<NoEquality>]
 type CaptureParser<'a, 'u> =
     | CaptureParser of Parser<'a, 'u>
     static member inline (---) (pipe, CaptureParser (p : Parser<'a, 'u>)) = appendCapture pipe p

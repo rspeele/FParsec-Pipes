@@ -23,6 +23,8 @@ type Associativity =
     | LeftAssociative
     | RightAssociative
 
+[<NoComparison>]
+[<NoEquality>]
 type Fixity<'e, 'u> =
     | Prefix of Parser<'e -> 'e, 'u>
     | Postfix of Parser<'e -> 'e, 'u>
@@ -72,6 +74,8 @@ let inline ternaryor left right make =
 let inline ternaryort left right make =
     ternaryor left right (fun x y z -> make (x, y, z))
 
+[<NoComparison>]
+[<NoEquality>]
 type OperatorTable<'e, 'u> =
     {
         /// Function which, given the overall expression parser,
@@ -85,12 +89,16 @@ type OperatorTable<'e, 'u> =
         Operators : Fixity<'e, 'u> list list
     }
 
+[<NoComparison>]
+[<NoEquality>]
 type private FastPrefixOperator<'e> =
     {
         Make : 'e -> 'e
         Precedence : int
     }
 
+[<NoComparison>]
+[<NoEquality>]
 type private TernaryTrailing<'e, 'u> =
     {
         MinInnerPrecedence : int
@@ -99,6 +107,8 @@ type private TernaryTrailing<'e, 'u> =
         Make : 'e -> 'e -> 'e -> 'e
     }
 
+[<NoComparison>]
+[<NoEquality>]
 type private TernaryOptionalTrailing<'e, 'u> =
     {
         MinInnerPrecedence : int
@@ -107,12 +117,16 @@ type private TernaryOptionalTrailing<'e, 'u> =
         MakeOptional : 'e -> 'e -> 'e option -> 'e
     }
 
+[<NoComparison>]
+[<NoEquality>]
 type private FastTrailingOperator<'e, 'u> =
     | PostfixTrailing of ('e -> 'e)
     | InfixTrailing of int * ('e -> 'e -> 'e)
     | TernaryTrailing of TernaryTrailing<'e, 'u>
     | TernaryOptionalTrailing of TernaryOptionalTrailing<'e, 'u>
 
+[<NoComparison>]
+[<NoEquality>]
 type private FastOperatorTable<'e, 'u> =
     {
         /// Function which, given the overall expression parser,
@@ -199,7 +213,7 @@ let private fastOperatorParser (table : FastOperatorTable<'e, 'u>) =
             for i = 0 to xforms.Count - 1 do
                 output <- xforms.[i] output
             output
-        for i, trailing in table.TrailingOperators |> Seq.indexed do
+        for i = 0 to table.TrailingOperators.Length - 1 do
             let nextPart = function
                 | PostfixTrailing make ->
                     preturn make

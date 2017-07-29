@@ -131,6 +131,8 @@ let private collapse (link : PipeLink<'a, 'b, 'u>) (inp : 'a) =
 /// if given a value of type `'fn`. `'fn` is typically a function
 /// that takes the captured inputs accumulated by the parser chain
 /// and combines them into a single output.
+[<NoComparison>]
+[<NoEquality>]
 type Pipe<'inp, 'out, 'fn, 'r, 'u> =
     | Pipe of (PipeLink<'inp, 'out, 'u> -> 'fn -> Parser<'r, 'u>)
     /// Provide the pipe with the function it requires to become a parser.
