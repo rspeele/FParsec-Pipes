@@ -22,7 +22,8 @@ open FParsec
 /// Represents the right side of a pipeline, which can become a `Parser<'out,'u>`
 /// if given a value of type `'inp`. Practically speaking, `'inp` is typically
 /// a function combining the outputs of the captured parsers constituting this pipe section.
-type IPipeLink<'inp, 'out, 'u> =
+[<AbstractClass>]
+type IPipeLink<'inp, 'out, 'u>() =
     /// Convert to a `Parser<'inp -> 'out, 'u>`. This defers the
     /// requirement of an `'inp` value to after parsing, rather than
     /// before creating the parser.
@@ -53,7 +54,7 @@ let rec private linkBeyond5<'a, 'b, 'f, 'u>
     (functionLink : IPipeLink<'a, 'b, 'u>)
     (parseRemaining : Parser<'b -> 'f, 'u>)
     : IPipeLink<'a, 'f, 'u> =
-    { new IPipeLink<'a, 'f, 'u> with
+    { new IPipeLink<'a, 'f, 'u>() with
         member __.ToFunctionParser = pipe2 (functionLink.ToFunctionParser) parseRemaining (>>)
         member __.ToOutputParser f = pipe2 (functionLink.ToOutputParser f) parseRemaining (|>)
         member __.LinkUp up = linkBeyond5 (functionLink.LinkUp up) parseRemaining
@@ -62,7 +63,7 @@ let rec private linkBeyond5<'a, 'b, 'f, 'u>
 
 let rec private link5 a b c d e =
     let p5 = pipe5 a b c d e (fun a b c d e f -> f a b c d e)
-    { new IPipeLink<_, _, _> with
+    { new IPipeLink<_, _, _>() with
         member __.ToFunctionParser = p5
         member __.ToOutputParser f = pipe5 a b c d e f
         member __.LinkUp up =
@@ -71,7 +72,7 @@ let rec private link5 a b c d e =
     }
 
 and private link4 a b c d =
-    { new IPipeLink<_, _, _> with
+    { new IPipeLink<_, _, _>() with
         member __.ToFunctionParser = pipe4 a b c d (fun a b c d f -> f a b c d)
         member __.ToOutputParser f = pipe4 a b c d f
         member __.LinkUp up = link5 up a b c d
@@ -79,7 +80,7 @@ and private link4 a b c d =
     }
 
 and private link3 a b c =
-    { new IPipeLink<_, _, _> with
+    { new IPipeLink<_, _, _>() with
         member __.ToFunctionParser = pipe3 a b c (fun a b c f -> f a b c)
         member __.ToOutputParser f = pipe3 a b c f
         member __.LinkUp up = link4 up a b c
@@ -87,7 +88,7 @@ and private link3 a b c =
     }
 
 and private link2 a b =
-    { new IPipeLink<_, _, _> with
+    { new IPipeLink<_, _, _>() with
         member __.ToFunctionParser = pipe2 a b (fun a b f -> f a b)
         member __.ToOutputParser f = pipe2 a b f
         member __.LinkUp up = link3 up a b
@@ -96,7 +97,7 @@ and private link2 a b =
 
 // Extra type annotation on link1 is necessary due to its usage in link5.
 and private link1<'a, 'b, 'u> (a : Parser<'a, 'u>) : IPipeLink<'a -> 'b, 'b, 'u> =
-    { new IPipeLink<'a -> 'b, 'b, 'u> with
+    { new IPipeLink<'a -> 'b, 'b, 'u>() with
         member __.ToFunctionParser = a |>> (|>)
         member __.ToOutputParser f = a |>> f
         member __.LinkUp up = link2 up a
@@ -104,7 +105,7 @@ and private link1<'a, 'b, 'u> (a : Parser<'a, 'u>) : IPipeLink<'a -> 'b, 'b, 'u>
     }
 
 let rec private linkIgnored p =
-    { new IPipeLink<'a, 'a, 'u> with
+    { new IPipeLink<'a, 'a, 'u>() with
         member __.ToFunctionParser = p >>% id
         member __.ToOutputParser f = p >>% f
         member __.LinkUp up = link1 (up .>> p)
@@ -112,7 +113,7 @@ let rec private linkIgnored p =
     }
 
 let link0 () =
-    { new IPipeLink<_, _, _> with
+    { new IPipeLink<_, _, _>() with
         member __.ToFunctionParser = preturn id
         member __.ToOutputParser f = preturn f
         member __.LinkUp up = link1 up
