@@ -18,6 +18,7 @@
 [<AutoOpen>]
 module FParsec.Pipes.Pipes
 open FParsec
+open System
 
 /// Represents the right side of a pipeline, which can become a `Parser<'out,'u>`
 /// if given a value of type `'inp`. Practically speaking, `'inp` is typically
@@ -135,6 +136,29 @@ type Pipe<'inp, 'out, 'fn, 'r, 'u> =
     /// Provide the pipe with the function it requires to become a parser.
     static member (-%>) (Pipe parent, fn : 'fn) : Parser<'r, 'u> =
         parent (link0()) fn
+    [<Obsolete("Exists to convince compiler to do overload resolution")>]
+    static member (---) (p : Pipe<_, _, _, _, _>, ()) = p
+    static member (---) (Pipe parent, parser : Parser<_, _>) =
+        Pipe <| fun link fn ->
+            parent (ignoreUp parser link) fn
+    [<Obsolete("Exists to convince compiler to do overload resolution")>]
+    static member (?--) (p : Pipe<_, _, _, _, _>, _ : int) = p
+    [<Obsolete("Exists to convince compiler to do overload resolution")>]
+    static member (?--) (p : Pipe<_, _, _, _, _>, ()) = p
+    static member (?--) (Pipe parent, parser: Parser<_, _>) =
+        Pipe <| fun link fn ->
+            let first = parent(link0()) fn
+            let next = (ignoreUp parser link).ToFunctionParser
+            pipe2 (attempt first) next (|>)
+    [<Obsolete("Exists to convince compiler to do overload resolution")>]
+    static member (--?) (p : Pipe<_, _, _, _, _>, _ : int) = p
+    [<Obsolete("Exists to convince compiler to do overload resolution")>]
+    static member (--?) (p : Pipe<_, _, _, _, _>, ()) = p
+    static member (--?) (Pipe parent, parser : Parser<_, _>) =
+        Pipe <| fun link fn ->
+            let first = parent(link0()) fn
+            let next = (ignoreUp parser link).ToFunctionParser
+            attempt first .>>.? next |>> (fun (f, n) -> f |> n)
 
 let private supplyPipeFunction (Pipe parent) fn =
     parent (link0()) fn : Parser<_, _>
