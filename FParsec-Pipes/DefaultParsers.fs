@@ -28,51 +28,51 @@ let pcharCI c : Parser<char, 'u> =
         else Reply(Error, expectedString (string c))
 
 /// Represents a parser whose output is ignored within a pipeline.
-type Ignore<'a, 'u> =
+type IgnoreParser<'a, 'u> =
     | IgnoreParser of Parser<'a, 'u>
     static member (---) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnore pipe p
     static member (?--) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackLeft pipe p
     static member (--?) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackRight pipe p
 
 /// Represents a parser whose output is captured within a pipeline.
-type Capture<'a, 'u> =
-    | Capture of Parser<'a, 'u>
-    static member (---) (pipe, Capture (p : Parser<'a, 'u>)) = appendCapture pipe p
-    static member (?--) (pipe, Capture (p : Parser<'a, 'u>)) = appendCaptureBacktrackLeft pipe p
-    static member (--?) (pipe, Capture (p : Parser<'a, 'u>)) = appendCaptureBacktrackRight pipe p
+type CaptureParser<'a, 'u> =
+    | CaptureParser of Parser<'a, 'u>
+    static member (---) (pipe, CaptureParser (p : Parser<'a, 'u>)) = appendCapture pipe p
+    static member (?--) (pipe, CaptureParser (p : Parser<'a, 'u>)) = appendCaptureBacktrackLeft pipe p
+    static member (--?) (pipe, CaptureParser (p : Parser<'a, 'u>)) = appendCaptureBacktrackRight pipe p
 
 [<AllowNullLiteral>]
 type DefaultParserOf<'a>() =
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^x >) =
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<char>) = anyChar |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<float>) = pfloat |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<int8>) = pint8 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<int16>) = pint16 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<int32>) = pint32 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<int64>) = pint64 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<uint8>) = puint8 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<uint16>) = puint16 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<uint32>) = puint32 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<uint64>) = puint64 |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf<Position>) = getPosition |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, _ : DefaultParserOf< ^x >) =
         (^x : (static member get_DefaultParser : unit -> Parser< ^x, unit >)()) |> IgnoreParser
 and DefaultParser =
     | DefaultParser
-    static member inline (%!!~~%) (DefaultParser, cap : Capture<_, _>) = cap
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, cap : CaptureParser<_, _>) = cap
+    static member inline (%!!~~%) (_ : DefaultParser, existing : Parser<'a, 'u>) = existing |> IgnoreParser
 
-    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, literal : char) = pchar literal |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, literal : string) = pstring literal |> IgnoreParser
 
-    static member inline (%!!~~%) (DefaultParser, list : _ list) =
+    static member inline (%!!~~%) (_ : DefaultParser, list : _ list) =
         [| for parserish in list ->
             let (IgnoreParser parser) = DefaultParser %!!~~% parserish
             parser
         |] |> choice |> IgnoreParser
 and CaseInsensitive<'a> =
     | CaseInsensitive of 'a
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> IgnoreParser
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> IgnoreParser
+    static member inline (%!!~~%) (_ : DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> IgnoreParser
 
 /// Mark `x` as being case insensitive.
 /// Useful for use with `%`. For example `%ci "test"` is equivalent
@@ -94,7 +94,7 @@ let inline defaultParser x =
 /// Converts its argument to a parser via `defaultParser` and
 /// marks the result as a captured input, which can be consumed
 /// by the function at the end of a pipe.
-let inline (~+.) x = Capture (defaultParser x)
+let inline (~+.) x = CaptureParser (defaultParser x)
 
 /// Chains `parser` onto `pipe`.
 /// `parser` will be converted to a parser and may be captured or ignored based
