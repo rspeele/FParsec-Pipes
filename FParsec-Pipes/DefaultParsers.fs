@@ -23,61 +23,56 @@ open FParsec
 let pcharCI c : Parser<char, 'u> =
     let cfs = Text.FoldCase(c : char)
     fun stream ->
-        let index0 = stream.IndexToken
         if stream.SkipCaseFolded(cfs) then
              Reply(stream.Peek(-1))
         else Reply(Error, expectedString (string c))
 
-let inline (---) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member Append : Parser<'a, 'u> * Pipe<'inp, 'out, 'fn, 'r, 'u> -> Pipe<_, 'out, 'fn, 'r, 'u>)
-        (fitting.Appendable, fitting.Parser, pipe))
+/// Represents a parser whose output is ignored within a pipeline.
+type Ignore<'a, 'u> =
+    | IgnoreParser of Parser<'a, 'u>
+    static member (---) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnore pipe p
+    static member (?--) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackLeft pipe p
+    static member (--?) (pipe, IgnoreParser (p : Parser<'a, 'u>)) = appendIgnoreBacktrackRight pipe p
 
-let inline (?--) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member AppendBacktrackLeft : Parser<'a, 'u> * Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
-        (fitting.Appendable, fitting.Parser, pipe))
-
-let inline (--?) (pipe : Pipe<'inp, 'inp, 'fn, 'r, 'u>) (fitting : Fitting<'a, 'u, ^app>) =
-    (^app : (member AppendBacktrackRight : Parser<'a, 'u> * Pipe<'inp, 'inp, 'fn, 'r, 'u> -> Pipe<_, 'x, 'fn, 'x, 'u>)
-        (fitting.Appendable, fitting.Parser, pipe))
-
-type DefaultFitting =
-    | DefaultFitting
-    static member inline (%!!&&%) (DefaultFitting, parser : Parser<_, _>) =
-        IgnoreFitting(parser) :> Fitting<_, _, _>
-    static member inline (%!!&&%) (DefaultFitting, fitting : Fitting<_, _, _>) =
-        fitting
+/// Represents a parser whose output is captured within a pipeline.
+type Capture<'a, 'u> =
+    | Capture of Parser<'a, 'u>
+    static member (---) (pipe, Capture (p : Parser<'a, 'u>)) = appendCapture pipe p
+    static member (?--) (pipe, Capture (p : Parser<'a, 'u>)) = appendCaptureBacktrackLeft pipe p
+    static member (--?) (pipe, Capture (p : Parser<'a, 'u>)) = appendCaptureBacktrackRight pipe p
 
 [<AllowNullLiteral>]
 type DefaultParserOf<'a>() =
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 
-    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<char>) = anyChar |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<float>) = pfloat |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int8>) = pint8 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int16>) = pint16 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int32>) = pint32 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<int64>) = pint64 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint8>) = puint8 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint16>) = puint16 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint32>) = puint32 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<uint64>) = puint64 |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf<Position>) = getPosition |> IgnoreParser
     static member inline (%!!~~%) (DefaultParser, _ : DefaultParserOf< ^x >) =
-        (^x : (static member get_DefaultParser : unit -> Parser< ^x, unit >)())
+        (^x : (static member get_DefaultParser : unit -> Parser< ^x, unit >)()) |> IgnoreParser
 and DefaultParser =
     | DefaultParser
-    static member inline (%!!~~%) (DefaultParser, cap : Fitting<_, _, _>) = cap
-    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing
+    static member inline (%!!~~%) (DefaultParser, cap : Capture<_, _>) = cap
+    static member inline (%!!~~%) (DefaultParser, existing : Parser<'a, 'u>) = existing |> IgnoreParser
 
-    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal
-    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal
+    static member inline (%!!~~%) (DefaultParser, literal : char) = pchar literal |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, literal : string) = pstring literal |> IgnoreParser
 
     static member inline (%!!~~%) (DefaultParser, list : _ list) =
         [| for parserish in list ->
-            DefaultParser %!!~~% parserish
-        |] |> choice
+            let (IgnoreParser parser) = DefaultParser %!!~~% parserish
+            parser
+        |] |> choice |> IgnoreParser
 and CaseInsensitive<'a> =
     | CaseInsensitive of 'a
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal 
-    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal 
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : char)) = pcharCI literal |> IgnoreParser
+    static member inline (%!!~~%) (DefaultParser, CaseInsensitive (literal : string)) = pstringCI literal |> IgnoreParser
 
 /// Mark `x` as being case insensitive.
 /// Useful for use with `%`. For example `%ci "test"` is equivalent
@@ -93,34 +88,32 @@ let p<'a> = null : DefaultParserOf<'a>
 /// Create a parser from `x`, if there is a single sensible parser possible.
 /// For example, `defaultParser "str"` is equivalent to `pstring str`.
 let inline defaultParser x =
-    DefaultParser %!!~~% x : Parser<_, _>
-
-let inline defaultFitting x =
-    DefaultFitting %!!&&% (DefaultParser %!!~~% x) : Fitting<_, _, _>
+    let (IgnoreParser parser) = DefaultParser %!!~~% x
+    parser
 
 /// Converts its argument to a parser via `defaultParser` and
 /// marks the result as a captured input, which can be consumed
 /// by the function at the end of a pipe.
-let inline (~+.) x = CaptureFitting(defaultParser x)
+let inline (~+.) x = Capture (defaultParser x)
 
 /// Chains `parser` onto `pipe`.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
-let inline (--) pipe parser =
-    pipe --- defaultFitting parser
+let inline (--) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) parser : Pipe<_, _, 'fn, _, 'u> =
+    pipe --- (DefaultParser %!!~~% parser)
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
-let inline (?-) pipe parser =
-    pipe ?-- defaultFitting parser
+let inline (?-) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) parser : Pipe<_, _, 'fn, _, 'u> =
+    pipe ?-- (DefaultParser %!!~~% parser)
 
 /// Chains `parser` onto `pipe`, with backtracking if `pipe` fails prior to `parser`
 /// or `parser` fails without changing the parser state.
 /// `parser` will be converted to a parser and may be captured or ignored based
 /// on whether `+.` was used on it.
-let inline (-?) pipe parser =
-    pipe --? defaultFitting parser
+let inline (-?) (pipe : Pipe<'inp, 'out, 'fn, 'r, 'u>) parser : Pipe<_, _, 'fn, _, 'u> =
+    pipe --? (DefaultParser %!!~~% parser)
 
 /// Creates a pipe starting with `parser`. Shorthand for `pipe -- parser`.
 let inline (~%%) parser : Pipe<_, _, _, _, _> =
