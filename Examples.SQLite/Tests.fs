@@ -106,7 +106,7 @@ type Tests() =
     member __.TestOnSelects() =
         let parser = SQLiteParser.selectStmt .>> SQLiteParser.ws .>> %[';'; '}'; ')'; '"']
         let mutable total = 0
-        for file in Directory.GetFiles("../../Tests", "*.test") do
+        for file in Directory.GetFiles("./Tests", "*.test") do
             let mutable good = 0
             let name = Path.GetFileNameWithoutExtension(file)
             printfn "### File: %s ###" name
