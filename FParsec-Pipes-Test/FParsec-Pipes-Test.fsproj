@@ -13,10 +13,10 @@
     <Compile Include="TestCustomDefaultParsers.fs" />
     <Compile Include="TestMany.fs" />
     <Compile Include="TestPrecedence.fs" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170628-02" />
-    <PackageReference Include="MSTest.TestAdapter" Version="1.1.18" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.1.18" />
     <ProjectReference Include="..\FParsec-Pipes\FParsec-Pipes.fsproj" />
     <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.2.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.2.0" />
   </ItemGroup>
 </Project>

@@ -38,18 +38,14 @@
       <div class="row">
         <div class="span9" id="main">
           <h1>FParsec-Pipes reference</h1>
-
 <h2>Default Parsers</h2>
-
 <h3>%</h3>
-
 <p>The default parser for a given value is <code>%value</code>.
 This is implicitly used by several other FParsec-Pipes operators.
 <strong>For the rest of this document, the phrase "parserish value" will refer to a value that
 either is a parser or can be converted to one using <code>%</code>.</strong>
 Here is the list of what <code>%</code> means based on the type given to it.
 Note that when given a list of values, <code>%</code> applies itself to each value in the list then passes the result to <code>choice</code>.</p>
-
 <table>
 <thead>
 <tr class="header">
@@ -171,85 +167,49 @@ Note that when given a list of values, <code>%</code> applies itself to each val
 </tbody>
 </table>
 
-
 <h2>Pipes</h2>
-
 <h3>pipe</h3>
-
 <p><code>pipe</code> begins a pipeline. This is not useful on its own.</p>
-
 <h3>%%</h3>
-
 <p><code>%% parserish</code> begins a pipeline with a parserish value.
 It is equivalent to <code>pipe -- parserish</code>.</p>
-
 <h3>--</h3>
-
 <p><code>myPipe -- parserish</code> adds a parserish value to a pipeline.</p>
-
 <h3>?-</h3>
-
 <p><code>myPipe ?- parserish</code> adds a parserish value to a pipeline, backtracking the entire pipeline if
 anything within <code>myPipe</code> fails.</p>
-
 <h3>-?</h3>
-
 <p><code>myPipe -? parserish</code> adds a parserish value to a pipeline, backtracking the entire piplime
 if <code>myPipe</code> fails or if <code>parserish</code> and following values in the pipeline fail without consuming input.</p>
-
 <h3>+.</h3>
-
 <p><code>+. parserish</code> marks a parserish value as captured.
 If added to a pipeline, this captured value will need to be consumed by the function passed to <code>-|&gt;</code>.</p>
-
 <h3>-|&gt;</h3>
-
 <p><code>myPipe -|&gt; myFunction</code> terminates a pipeline with a function consuming the captured outputs of the pipeline.
 If the pipeline has no outputs (no captured values), then <code>myFunction</code> can be of any type, and will be returned
 on a successful parse (as if used with <code>preturn</code>).</p>
-
 <h3>-%&gt; auto</h3>
-
 <p><code>myPipe -%&gt; auto</code> terminates a pipeline which has 1 to 5 captured outputs with a function combining them
 into a tuple of the appropriate arity.</p>
-
 <h2>Repetition</h2>
-
 <h3>qty</h3>
-
 <p><code>qty</code> is an object which can be indexed or sliced into to get a <code>Range</code>.</p>
-
 <h3>qty.[min..max]</h3>
-
 <p><code>qty.[min..max]</code> indicates that the associated parser should be consumed at least <code>min</code> and at most <code>max</code> times.</p>
-
 <h3>qty.[..max]</h3>
-
 <p><code>qty.[..max]</code> indicates that the associated parser should be consumed at least 0 and at most <code>max</code> times.</p>
-
 <h3>qty.[min..]</h3>
-
 <p><code>qty.[min..]</code> indicates that the associated parser should be consumed at least <code>min</code> times.</p>
-
 <h3>qty.[n]</h3>
-
 <p><code>qty.[n]</code> indicates that the associated parser should be consumed exactly <code>n</code> times.
 The resulting parser will return an array, not a <code>ResizeArray</code>.</p>
-
 <h3>Range * parserish</h3>
-
 <p><code>range * parserish</code> consumes <code>parserish</code> <code>range</code> times and returns the result as a ResizeArray.</p>
-
 <h3>parserish * Range</h3>
-
 <p><code>parserish * range</code> is equivalent to <code>range * parserish</code>.</p>
-
 <h3>Range / parserish</h3>
-
 <p><code>range / parserish</code> indicates that the parser that will be consumed <code>range</code> times should be separated by <code>parserish</code>.</p>
-
 <h3>Range /. parserish</h3>
-
 <p><code>range / parserish</code> indicates that the parser that will be consumed <code>range</code> times should be separated by <code>parserish</code>,
 and that a trailing <code>parserish</code> may occur at the end of the list.</p>
 
