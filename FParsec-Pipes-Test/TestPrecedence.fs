@@ -33,14 +33,14 @@ type Expr =
 
 [<TestClass>]
 type TestPrecedence() =
-    static let literal =
+    let literal =
         puint32 |>> Literal
 
-    static let name =
+    let name =
         many1Satisfy2 isLetter (fun c -> isDigit c || isLetter c)
         |>> Name
 
-    static let ops =
+    let ops =
         [
             [ infixlt '@' Email ]
             [ postfix '!' Factorial ]
@@ -51,14 +51,14 @@ type TestPrecedence() =
             [ ternarylt "between" "and" Between ]
             [ ternaryrt '?' ':' Conditional ]
         ]
-    static let expr =
+    let expr =
         {
             Whitespace = spaces
             Term = fun expr -> choice [| literal; name; %% '(' -- spaces -- +.expr -- ')' -%> auto |]
             Operators = ops
         } |> expression
 
-    static let test input expected =
+    let test input expected =
         let parsed = run expr input
         match parsed with
         | Success(result, _, _) ->
