@@ -2,6 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Authors>Robert Peele</Authors>
+    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/rspeele/FParsec-Pipes</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rspeele/FParsec-Pipes</RepositoryUrl>
+    <PackageTags>parser combinator f# fsharp c# csharp parsec fparsec pipe pipes</PackageTags>
+    <PackageReleaseNotes>Target .NET standard 2.0.</PackageReleaseNotes>
+    <Copyright>Copyright 2016 Robert Peele</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
