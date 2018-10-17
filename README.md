@@ -1,11 +1,23 @@
-# FParsec-Pipes: making FParsec parsers even more concise and consistent
+# FParsec-Pipes
 
-FParsec is an F# library for writing parsers. This library extends [FParsec][1]
-with a new set of combinators, which I believe make it even easier to translate
-from a formal grammar like [EBNF][2] to F# parsing code and end up with a fast,
-highly readable parser.
+This library is an extension to the FParsec library (http://www.quanttec.com/fparsec/).
 
-The documentation is located at http://rspeele.github.io/FParsec-Pipes/Intro.html.
+Please see the [project page](http://rspeele.github.io/FParsec-Pipes/)
+or read the [intro](http://rspeele.github.io/FParsec-Pipes/Intro.html).
 
-[1]: http://www.quanttec.com/fparsec/
-[2]: https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_Form
+FParsec-Pipes does not define new parsers.
+Instead, its goal is to make it easier and more readable to define your own parsers.
+
+## Why should I care? Show me some code I can write with this.
+
+```fsharp
+let pdatetime =
+    let digits (count : int) = %% +.(qty.[count] * digit) -|> (String >> Int32.Parse)
+    %% +.digits 4 -- '-' -- +.digits 2 -- '-' -- +.digits 2 -- 'T'
+    -- +.digits 2 -- ':' -- +.digits 2 -- ':' -- +.digits 2
+    -|> fun yyyy mm dd h m s ->
+        new DateTime(yyyy, mm, dd, h, m, s)
+```
+
+
+
