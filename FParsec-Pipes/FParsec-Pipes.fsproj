@@ -1,14 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
     <Authors>Robert Peele</Authors>
+    <Description>A library for building FParsec parsers using pipeline operators.</Description>
     <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/rspeele/FParsec-Pipes</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rspeele/FParsec-Pipes</RepositoryUrl>
     <PackageTags>parser combinator f# fsharp c# csharp parsec fparsec pipe pipes</PackageTags>
-    <PackageReleaseNotes>Target .NET standard 2.0.</PackageReleaseNotes>
+    <PackageReleaseNotes>Target netstandard1.6 and net45</PackageReleaseNotes>
     <Copyright>Copyright 2016 Robert Peele</Copyright>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Version>1.1.0</Version>
+
+    <!-- The F# SDK will specify a random package version. We'd rather be specific. -->
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="FSharp.Core" Version="4.2.3" />
     <PackageReference Include="FParsec" Version="1.0.3" />
   </ItemGroup>
 

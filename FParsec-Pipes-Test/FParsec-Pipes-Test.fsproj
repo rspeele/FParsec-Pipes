@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFrameworks>net45;netcoreapp2.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
     <RootNamespace>FParsec_Pipes_Test</RootNamespace>
+
+    <!-- https://github.com/Microsoft/vstest/issues/1764 -->
+    <NoWarn>$(NoWarn);NU1605</NoWarn>
+    <!-- Test with the library's FSharp.Core version. -->
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
 
     <IsPackable>false</IsPackable>
   </PropertyGroup>
