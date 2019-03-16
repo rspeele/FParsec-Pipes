@@ -11,7 +11,7 @@
     <PackageReleaseNotes>Target netstandard1.6 and net45</PackageReleaseNotes>
     <Copyright>Copyright 2016 Robert Peele</Copyright>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
 
     <!-- The F# SDK will specify a random package version. We'd rather be specific. -->
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
