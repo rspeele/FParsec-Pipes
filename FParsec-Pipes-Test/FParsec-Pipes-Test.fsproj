@@ -22,7 +22,6 @@
     <Compile Include="TestIgnoredInputs.fs" />
     <Compile Include="TestMany.fs" />
     <Compile Include="TestPrecedence.fs" />
-    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
