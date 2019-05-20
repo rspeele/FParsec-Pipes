@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
@@ -62,15 +62,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="1.2.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.2.1" />
+    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.1.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FParsec-Pipes\FParsec-Pipes.fsproj" />
   </ItemGroup>
 
-  <ItemGroup />
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.6.2" />
+  </ItemGroup>
 
 </Project>
