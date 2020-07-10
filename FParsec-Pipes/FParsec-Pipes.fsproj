@@ -1,14 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45;netstandard1.6</TargetFrameworks>
+    <TargetFrameworks>net45;netstandard1.6;netstandard2.0</TargetFrameworks>
     <Authors>Robert Peele</Authors>
     <Description>A library for building FParsec parsers using pipeline operators.</Description>
-    <PackageLicenseUrl>https://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/rspeele/FParsec-Pipes</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rspeele/FParsec-Pipes</RepositoryUrl>
     <PackageTags>parser combinator f# fsharp c# csharp parsec fparsec pipe pipes</PackageTags>
-    <PackageReleaseNotes>Target netstandard1.6 and net45</PackageReleaseNotes>
+    <PackageReleaseNotes>Target netstandard2.0 as well</PackageReleaseNotes>
     <Copyright>Copyright 2016 Robert Peele</Copyright>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>1.1.1</Version>
@@ -26,8 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="FSharp.Core" Version="4.2.3" />
-    <PackageReference Include="FParsec" Version="1.0.3" />
+    <PackageReference Include="FSharp.Core" Version="4.3.4" />
+    <PackageReference Include="FParsec" Version="1.1.1" />
   </ItemGroup>
 
 </Project>
