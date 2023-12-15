@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2035
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FParsec-Pipes", "FParsec-Pipes\FParsec-Pipes.fsproj", "{5EE8D5CB-B5F5-44DC-B3F7-A788D1922BC9}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FParsec-Pipes", "FParsec-Pipes\FParsec-Pipes.fsproj", "{5EE8D5CB-B5F5-44DC-B3F7-A788D1922BC9}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FParsec-Pipes-Test", "FParsec-Pipes-Test\FParsec-Pipes-Test.fsproj", "{68FE5E3F-B935-4E49-A8BF-BF890CA5B855}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FParsec-Pipes-Test", "FParsec-Pipes-Test\FParsec-Pipes-Test.fsproj", "{68FE5E3F-B935-4E49-A8BF-BF890CA5B855}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Examples.SQLite", "Examples.SQLite\Examples.SQLite.fsproj", "{823B94C8-5CE1-41C0-A4CF-7DA14887FB32}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Examples.SQLite", "Examples.SQLite\Examples.SQLite.fsproj", "{823B94C8-5CE1-41C0-A4CF-7DA14887FB32}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
