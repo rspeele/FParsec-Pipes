@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <RootNamespace>FParsec_Pipes_Test</RootNamespace>
 
     <!-- https://github.com/Microsoft/vstest/issues/1764 -->
@@ -22,7 +22,6 @@
     <Compile Include="TestIgnoredInputs.fs" />
     <Compile Include="TestMany.fs" />
     <Compile Include="TestPrecedence.fs" />
-    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>

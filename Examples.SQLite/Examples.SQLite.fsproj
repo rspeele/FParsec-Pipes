@@ -1,9 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Library</OutputType>
     <IsPackable>false</IsPackable>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <GenerateProgramFile>false</GenerateProgramFile>
+    <!-- Test.Sdk forces an Exe under the hood; F# then warns that there's no [<EntryPoint>]
+         in the last file. Harmless for a test-discovered project. -->
+    <NoWarn>$(NoWarn);FS0988</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -58,19 +63,17 @@
     <Compile Include="AST.fs" />
     <Compile Include="SQLite.fs" />
     <Compile Include="Tests.fs" />
-    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="1.2.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="1.2.1" />
+    <PackageReference Include="FSharp.Core" Version="8.0.401" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.6.1" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.6.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FParsec-Pipes\FParsec-Pipes.fsproj" />
   </ItemGroup>
-
-  <ItemGroup />
 
 </Project>
