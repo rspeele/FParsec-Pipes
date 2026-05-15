@@ -58,11 +58,11 @@ type TestPrecedence() =
             Operators = ops
         } |> expression
 
-    static let test input expected =
+    static let test input (expected : string) =
         let parsed = run expr input
         match parsed with
         | Success(result, _, _) ->
-            Assert.AreEqual(expected, result.ToString())
+            Assert.AreEqual<string>(expected, result.ToString())
         | Failure(msg, _, _) ->
             Assert.Fail(msg)
 
