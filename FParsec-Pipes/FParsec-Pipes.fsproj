@@ -8,7 +8,8 @@
     <PackageProjectUrl>https://github.com/rspeele/FParsec-Pipes</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rspeele/FParsec-Pipes</RepositoryUrl>
     <PackageTags>parser combinator f# fsharp c# csharp parsec fparsec pipe pipes</PackageTags>
-    <PackageReleaseNotes>Target netstandard2.0 and net8.0; bump FSharp.Core and FParsec.</PackageReleaseNotes>
+    <PackageReleaseNotes>Modernized for the 2026 .NET ecosystem. Multi-targets netstandard2.0, net8.0, and net10.0 with FSharp.Core 8.0.401+ and FParsec 1.1.1+. No API changes.</PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <Copyright>Copyright 2016 Robert Peele</Copyright>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Version>1.2.1</Version>
@@ -16,6 +17,10 @@
     <!-- The F# SDK will specify a random package version. We'd rather be specific. -->
     <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
